@@ -32,6 +32,7 @@ interface ExploreMapProps {
 
 export default function ExploreMapNative({ insetTop, insetBottom }: ExploreMapProps) {
   const mapRef = useRef<MapView>(null);
+  const markerPressInFlight = useRef(false);
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>('all');
   const [selectedZone, setSelectedZone] = useState<ExploreZone | null>(null);
   const [justUnlocked, setJustUnlocked] = useState<string | null>(null);
@@ -41,6 +42,7 @@ export default function ExploreMapNative({ insetTop, insetBottom }: ExploreMapPr
   const filteredZones = activeCategory === 'all' ? zones : zones.filter(z => z.category === activeCategory);
 
   const handleMarkerPress = useCallback((zone: ExploreZone) => {
+    markerPressInFlight.current = true;
     setSelectedZone(zone);
     setJustUnlocked(null);
     mapRef.current?.animateToRegion({
@@ -48,6 +50,12 @@ export default function ExploreMapNative({ insetTop, insetBottom }: ExploreMapPr
       longitude: zone.longitude,
       latitudeDelta: 0.012, longitudeDelta: 0.012,
     }, 400);
+
+    // iOS MapKit may fire map onPress right after marker press.
+    // Keep this window small so normal map taps still clear selection.
+    setTimeout(() => {
+      markerPressInFlight.current = false;
+    }, 150);
   }, []);
 
   const handleUnlock = useCallback(() => {
@@ -65,7 +73,10 @@ export default function ExploreMapNative({ insetTop, insetBottom }: ExploreMapPr
         showsUserLocation
         showsMyLocationButton={false}
         showsCompass={false}
-        onPress={() => setSelectedZone(null)}
+        onPress={() => {
+          if (markerPressInFlight.current) return;
+          setSelectedZone(null);
+        }}
       >
         {filteredZones.map(zone => {
           const unlocked = isZoneUnlocked(zone.id);
@@ -83,6 +94,8 @@ export default function ExploreMapNative({ insetTop, insetBottom }: ExploreMapPr
               <Marker
                 coordinate={{ latitude: zone.latitude, longitude: zone.longitude }}
                 onPress={() => handleMarkerPress(zone)}
+                onSelect={() => handleMarkerPress(zone)}
+                tracksViewChanges={false}
               >
                 <View style={[s.marker, isSelected && s.markerSel, unlocked && s.markerDone]}>
                   <Feather 
