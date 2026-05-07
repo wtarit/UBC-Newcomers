@@ -84,11 +84,20 @@ export default function ProfileScreen() {
 
   const progress = getProgress();
 
-  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [avatarUri, setAvatarUri] = useState<string | null>(
+    user?.profile_picture_url ?? null
+  );
 
   useEffect(() => {
     if (accessToken && !user) fetchUser();
   }, [accessToken]);
+
+  // Sync avatar whenever the user object is loaded or updated
+  useEffect(() => {
+    if (user?.profile_picture_url) {
+      setAvatarUri(user.profile_picture_url);
+    }
+  }, [user?.profile_picture_url]);
 
   const pickAvatar = async () => {
     try {
