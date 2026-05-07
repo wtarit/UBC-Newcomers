@@ -1,17 +1,19 @@
 /**
  * ExploreMap — Native (iOS/Android) version using react-native-maps
  */
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, Image,
 } from 'react-native';
 import MapView, { Marker, Circle } from 'react-native-maps';
 import { router } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 
 import { Brand, Surfaces, Typography, Spacing, Radius } from '@/constants/Colors';
 import { EXPLORE_ZONES, CATEGORY_COLORS, UBC_CENTER, type ExploreZone } from '@/constants/Zones';
 import { useExploreStore } from '@/stores/useExploreStore';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { api, type ConnectionLocationResponse } from '@/services/api';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 
@@ -37,7 +39,14 @@ export default function ExploreMapNative({ insetTop, insetBottom }: ExploreMapPr
   const [selectedZone, setSelectedZone] = useState<ExploreZone | null>(null);
   const [justUnlocked, setJustUnlocked] = useState<string | null>(null);
   const { zones, isZoneUnlocked, getProgress, totalPoints, unlockZone } = useExploreStore();
+  const { accessToken } = useAuthStore();
+  const [connections, setConnections] = useState<ConnectionLocationResponse[]>([]);
   const progress = getProgress();
+
+  useEffect(() => {
+    if (!accessToken) return;
+    api.listConnectionLocations().then(data => setConnections(data.connections)).catch(() => {});
+  }, [accessToken]);
 
   const filteredZones = activeCategory === 'all' ? zones : zones.filter(z => z.category === activeCategory);
 
@@ -113,6 +122,23 @@ export default function ExploreMapNative({ insetTop, insetBottom }: ExploreMapPr
             </React.Fragment>
           );
         })}
+
+        {connections.filter(c => c.latitude != null && c.longitude != null).map(conn => (
+          <Marker
+            key={`conn-${conn.id}`}
+            coordinate={{ latitude: conn.latitude!, longitude: conn.longitude! }}
+            tracksViewChanges={false}
+          >
+            <View style={s.connMarker}>
+              {conn.profile_picture_url ? (
+                <Image source={{ uri: conn.profile_picture_url }} style={s.connAvatar} />
+              ) : (
+                <Ionicons name="person" size={18} color={Brand.accent} />
+              )}
+              {conn.is_available_to_meet && <View style={s.connDot} />}
+            </View>
+          </Marker>
+        ))}
       </MapView>
 
       {/* Top stats */}
@@ -268,4 +294,8 @@ const s = StyleSheet.create({
   infoBtn: { width: 48, height: 48, borderRadius: Radius.md, backgroundColor: Surfaces.background, borderWidth: 1, borderColor: Surfaces.border, alignItems: 'center', justifyContent: 'center' },
   unlockMsg: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 10 },
   unlockMT: { fontFamily: Typography.fonts.h3, fontSize: 16, color: Brand.success },
+
+  connMarker: { width: 40, height: 40, borderRadius: 20, backgroundColor: Surfaces.background, borderWidth: 2, borderColor: Brand.accent, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  connAvatar: { width: 36, height: 36, borderRadius: 18 },
+  connDot: { position: 'absolute', bottom: -1, right: -1, width: 12, height: 12, borderRadius: 6, backgroundColor: Brand.success, borderWidth: 2, borderColor: Surfaces.background },
 });

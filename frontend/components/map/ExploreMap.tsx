@@ -1,11 +1,11 @@
 /**
  * ExploreMap — Web version (Flat Theme)
  */
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-    Dimensions, Platform,
+    Dimensions, Image, Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -18,6 +18,8 @@ import { Card } from '@/components/ui/Card';
 import { Brand, Radius, Spacing, Surfaces, Typography } from '@/constants/Colors';
 import { CATEGORY_COLORS, type ExploreZone } from '@/constants/Zones';
 import { useExploreStore } from '@/stores/useExploreStore';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { api, type ConnectionLocationResponse } from '@/services/api';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -106,7 +108,14 @@ export default function ExploreMapWeb({ insetTop, insetBottom }: ExploreMapProps
   const [justUnlocked, setJustUnlocked] = useState<string | null>(null);
   const [mapSize, setMapSize] = useState({ w: SCREEN_W, h: SCREEN_H - 88 });
   const { zones, isZoneUnlocked, getProgress, totalPoints, unlockZone } = useExploreStore();
+  const { accessToken } = useAuthStore();
+  const [connections, setConnections] = useState<ConnectionLocationResponse[]>([]);
   const progress = getProgress();
+
+  useEffect(() => {
+    if (!accessToken) return;
+    api.listConnectionLocations().then(data => setConnections(data.connections)).catch(() => {});
+  }, [accessToken]);
 
   const filteredZones = activeCategory === 'all'
     ? zones
@@ -186,16 +195,37 @@ export default function ExploreMapWeb({ insetTop, insetBottom }: ExploreMapProps
                 isSelected && s.markerSel,
                 unlocked && s.markerDone,
               ]}>
-                <Feather 
-                  name={zone.icon as any} 
-                  size={20} 
-                  color={isSelected ? Brand.accent : unlocked ? Brand.success : Brand.primary} 
+                <Feather
+                  name={zone.icon as any}
+                  size={20}
+                  color={isSelected ? Brand.accent : unlocked ? Brand.success : Brand.primary}
                 />
                 {unlocked && (
                   <View style={s.chk}><Feather name="check" size={10} color="#fff" /></View>
                 )}
               </View>
             </TouchableOpacity>
+          );
+        })}
+
+        {connections.filter(c => c.latitude != null && c.longitude != null).map(conn => {
+          const { x, y } = latLngToOffset(
+            conn.latitude!, conn.longitude!,
+            CENTER.lat, CENTER.lng,
+            ZOOM,
+            mapSize.w, mapSize.h
+          );
+          return (
+            <View key={`conn-${conn.id}`} style={[s.connMarkerWrap, { left: x - 20, top: y - 20 }]}>
+              <View style={s.connMarker}>
+                {conn.profile_picture_url ? (
+                  <Image source={{ uri: conn.profile_picture_url }} style={s.connAvatar} />
+                ) : (
+                  <Ionicons name="person" size={18} color={Brand.accent} />
+                )}
+                {conn.is_available_to_meet && <View style={s.connDot} />}
+              </View>
+            </View>
           );
         })}
       </View>
@@ -376,4 +406,9 @@ const s = StyleSheet.create({
   infoBtn: { width: 48, height: 48, borderRadius: Radius.md, backgroundColor: Surfaces.background, borderWidth: 1, borderColor: Surfaces.border, alignItems: 'center', justifyContent: 'center' },
   unlkMsg: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 10 },
   unlkMT: { fontFamily: Typography.fonts.h3, fontSize: 16, color: Brand.success },
+
+  connMarkerWrap: { position: 'absolute', alignItems: 'center', zIndex: 6 },
+  connMarker: { width: 40, height: 40, borderRadius: 20, backgroundColor: Surfaces.background, borderWidth: 2, borderColor: Brand.accent, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  connAvatar: { width: 36, height: 36, borderRadius: 18 },
+  connDot: { position: 'absolute', bottom: -1, right: -1, width: 12, height: 12, borderRadius: 6, backgroundColor: Brand.success, borderWidth: 2, borderColor: Surfaces.background },
 });
