@@ -43,6 +43,66 @@ def _event_text(event: Event) -> str:
     return " | ".join(parts)
 
 
+def _as_interest_set(user: User) -> set[str]:
+    if not user.interests:
+        return set()
+    return {str(i).strip().lower() for i in user.interests if str(i).strip()}
+
+
+def _fallback_user_matches(current_user: User, candidates: list[User]) -> list[dict]:
+    """
+    Deterministic fallback when Bedrock is unavailable or returns invalid data.
+    Scores are in [0.0, 1.0] and use shared profile signals.
+    """
+    curr_interests = _as_interest_set(current_user)
+    matches: list[dict] = []
+
+    for candidate in candidates:
+        score = 0.0
+        reasons: list[str] = []
+
+        cand_interests = _as_interest_set(candidate)
+        if curr_interests and cand_interests:
+            overlap = curr_interests.intersection(cand_interests)
+            union = curr_interests.union(cand_interests)
+            jaccard = len(overlap) / len(union) if union else 0.0
+            score += 0.5 * jaccard
+            if overlap:
+                reasons.append(f"shared interests: {', '.join(sorted(list(overlap))[:3])}")
+
+        if current_user.major and candidate.major and current_user.major.lower() == candidate.major.lower():
+            score += 0.2
+            reasons.append("same major")
+
+        if current_user.faculty and candidate.faculty and current_user.faculty.lower() == candidate.faculty.lower():
+            score += 0.1
+            reasons.append("same faculty")
+
+        if (
+            current_user.year_standing is not None
+            and candidate.year_standing is not None
+            and abs(current_user.year_standing - candidate.year_standing) <= 1
+        ):
+            score += 0.1
+            reasons.append("similar year")
+
+        if current_user.origin and candidate.origin and current_user.origin.lower() == candidate.origin.lower():
+            score += 0.1
+            reasons.append("same origin")
+
+        if score > 0:
+            matches.append(
+                {
+                    "user": candidate,
+                    "score": min(score, 1.0),
+                    "reason": "; ".join(reasons) if reasons else "similar profile",
+                }
+            )
+
+    matches.sort(key=lambda m: m["score"], reverse=True)
+    return [m for m in matches if m["score"] > 0.2]
+
+
 def match_users(current_user: User, candidates: list[User]) -> list[dict]:
     if not candidates:
         return []
@@ -78,10 +138,10 @@ Return ONLY valid JSON, no other text."""
         start = content.find("[")
         end = content.rfind("]") + 1
         if start == -1 or end == 0:
-            return []
+            return _fallback_user_matches(current_user, candidates)
 
         matches = json.loads(content[start:end])
-        return [
+        parsed = [
             {
                 "user": candidates[m["index"]],
                 "score": float(m["score"]),
@@ -90,8 +150,11 @@ Return ONLY valid JSON, no other text."""
             for m in matches
             if m["index"] < len(candidates)
         ]
+        if not parsed:
+            return _fallback_user_matches(current_user, candidates)
+        return parsed
     except Exception:
-        return []
+        return _fallback_user_matches(current_user, candidates)
 
 
 def match_events(current_user: User, events: list[Event]) -> list[dict]:
