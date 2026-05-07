@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Image,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform,
 } from 'react-native';
 import { router as expoRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,11 +19,21 @@ export default function EventDetailScreen() {
   const { events } = useExploreStore();
 
   const event = events.find(e => e.id === eventId);
-  if (!event) return <View style={s.container}><Text style={s.err}>Event not found</Text></View>;
+  if (!event) return (
+    <View style={[s.container, { paddingTop: insets.top + 20 }]}>
+      <TouchableOpacity style={s.closeBtn} onPress={() => expoRouter.back()}>
+        <Feather name="x" size={20} color={Brand.primary} />
+      </TouchableOpacity>
+      <Text style={s.err}>Event not found</Text>
+    </View>
+  );
 
   return (
-    <View style={[s.container, { paddingTop: insets.top }]}>
-      <TouchableOpacity style={s.closeBtn} onPress={() => expoRouter.back()}>
+    <View style={[s.container, { paddingTop: Platform.OS === 'ios' ? 20 : insets.top }]}>
+      <TouchableOpacity 
+        style={[s.closeBtn, { top: Platform.OS === 'ios' ? 20 : 56 }]} 
+        onPress={() => expoRouter.back()}
+      >
         <Feather name="x" size={20} color={Brand.primary} />
       </TouchableOpacity>
 
@@ -83,7 +93,7 @@ export default function EventDetailScreen() {
           </Text>
         </View>
 
-        <View style={{ height: 48 }} />
+        <View style={{ height: 48 + insets.bottom }} />
       </ScrollView>
     </View>
   );
@@ -93,7 +103,7 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: Surfaces.default },
   scroll: { paddingHorizontal: Spacing.lg },
   err: { fontFamily: Typography.fonts.body, color: Brand.primary, fontSize: 16, textAlign: 'center', marginTop: 100 },
-  closeBtn: { position: 'absolute', top: 56, right: 20, zIndex: 10, width: 36, height: 36, borderRadius: Radius.full, backgroundColor: Surfaces.background, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Surfaces.border },
+  closeBtn: { position: 'absolute', right: 20, zIndex: 10, width: 36, height: 36, borderRadius: Radius.full, backgroundColor: Surfaces.background, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Surfaces.border },
   hero: { alignItems: 'center', paddingVertical: Spacing.xxl, marginHorizontal: -Spacing.lg, paddingHorizontal: Spacing.lg, borderBottomWidth: 1, borderBottomColor: Surfaces.border },
   heroImg: { width: '100%', height: 200, borderRadius: Radius.md, marginBottom: Spacing.md },
   iconWrap: { width: 96, height: 96, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.md, borderWidth: 1 },

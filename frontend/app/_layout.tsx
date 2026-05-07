@@ -129,6 +129,13 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
+          name="event-detail"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
           name="modal"
           options={{ presentation: 'modal', headerShown: false }}
         />
