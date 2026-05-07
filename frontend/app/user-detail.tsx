@@ -1,36 +1,69 @@
 /**
  * User Detail Modal — Nearby user profile + connect (UBC-Navigate)
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Brand, Surfaces, Typography, Spacing, Radius } from '@/constants/Colors';
-import { useNearbyStore } from '@/stores/useNearbyStore';
+import { useNearbyStore, type NearbyUser } from '@/stores/useNearbyStore';
+import { api } from '@/services/api';
 import { Card } from '@/components/ui/Card';
 import { MatchBadge } from '@/components/ui/MatchBadge';
 import { Button } from '@/components/ui/Button';
 import { Ionicons, Feather } from '@expo/vector-icons';
 
 export default function UserDetailScreen() {
-  const { userId } = useLocalSearchParams<{ userId: string }>();
+  const { userId, fromConnection } = useLocalSearchParams<{ userId: string; fromConnection?: string }>();
   const insets = useSafeAreaInsets();
   const { nearbyUsers, matchedUsers, sendConnectionRequest, getIntroForUser, pendingConnections, acceptConnectionRequest } = useNearbyStore();
   const [sending, setSending] = useState(false);
   const [accepted, setAccepted] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
+  const [fetchedUser, setFetchedUser] = useState<NearbyUser | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const nearbyUser = nearbyUsers.find((u) => u.id === userId);
   const matchedUser = matchedUsers.find((u) => u.id === userId);
-  const user = nearbyUser
+  const storeUser = nearbyUser
     ? {
         ...nearbyUser,
         matchScore: matchedUser?.matchScore ?? nearbyUser.matchScore,
         matchReason: matchedUser?.matchReason ?? nearbyUser.matchReason,
       }
     : matchedUser;
+
+  useEffect(() => {
+    if (!storeUser && userId && !fetchedUser) {
+      setLoading(true);
+      api.getUser(userId).then(u => {
+        setFetchedUser({
+          id: u.id,
+          displayName: u.full_name,
+          program: u.major || 'Undeclared',
+          year: u.year_standing || 1,
+          interests: u.interests || [],
+          origin: u.origin || '',
+          bio: u.bio || '',
+          matchScore: 0,
+          distanceMeters: 0,
+          profilePictureUrl: u.profile_picture_url,
+          isAvailableToMeet: u.is_available_to_meet,
+          connectionsCount: u.connections_count,
+        });
+      }).catch(() => {}).finally(() => setLoading(false));
+    }
+  }, [userId]);
+
+  const user = storeUser || fetchedUser;
+
+  if (loading) return (
+    <View style={[s.container, { justifyContent: 'center', alignItems: 'center' }]}>
+      <ActivityIndicator size="large" color={Brand.accent} />
+    </View>
+  );
   if (!user) return <View style={s.container}><Text style={s.err}>User not found</Text></View>;
 
   const existingIntro = getIntroForUser(user.id);
@@ -65,9 +98,11 @@ export default function UserDetailScreen() {
           </View>
           <Text style={s.name}>{user.displayName}</Text>
           <Text style={s.prog}>{user.program} · Year {user.year}</Text>
-          <View style={{ marginTop: Spacing.sm }}>
-            <MatchBadge score={user.matchScore} size="lg" />
-          </View>
+          {user.matchScore > 0 && (
+            <View style={{ marginTop: Spacing.sm }}>
+              <MatchBadge score={user.matchScore} size="lg" />
+            </View>
+          )}
         </View>
 
         <Card style={s.card}>
@@ -77,11 +112,13 @@ export default function UserDetailScreen() {
         </Card>
 
         <Card style={s.card}>
-          <View style={s.detRow}>
-            <Feather name="map-pin" size={16} color={Brand.secondary} style={s.detIcon} />
-            <Text style={s.detLabel}>Distance</Text>
-            <Text style={[s.detVal, { color: Brand.primary }]}>{user.distanceMeters}m away</Text>
-          </View>
+          {user.distanceMeters > 0 && (
+            <View style={s.detRow}>
+              <Feather name="map-pin" size={16} color={Brand.secondary} style={s.detIcon} />
+              <Text style={s.detLabel}>Distance</Text>
+              <Text style={[s.detVal, { color: Brand.primary }]}>{user.distanceMeters}m away</Text>
+            </View>
+          )}
           {user.origin ? (
             <View style={s.detRow}>
               <Feather name="flag" size={16} color={Brand.secondary} style={s.detIcon} />
@@ -108,7 +145,7 @@ export default function UserDetailScreen() {
         )}
 
         <View style={s.section}>
-          {accepted ? (
+          {fromConnection === '1' || accepted ? (
             <Card style={{ backgroundColor: '#F0FDF4', borderColor: Brand.success }}>
               <View style={s.sentRow}>
                 <Feather name="check-circle" size={18} color={Brand.success} />
