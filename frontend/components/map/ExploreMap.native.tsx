@@ -1,21 +1,21 @@
 /**
  * ExploreMap — Native (iOS/Android) version using react-native-maps
  */
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, Image,
 } from 'react-native';
 import MapView, { Marker, Circle } from 'react-native-maps';
 import { router } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 
 import { Brand, Surfaces, Typography, Spacing, Radius } from '@/constants/Colors';
 import { EXPLORE_ZONES, CATEGORY_COLORS, UBC_CENTER, type ExploreZone } from '@/constants/Zones';
 import { useExploreStore } from '@/stores/useExploreStore';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { api, type ConnectionLocationResponse, type EventResponse } from '@/services/api';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-
-import { type EventResponse } from '@/services/api';
 
 type CategoryFilter = ExploreZone['category'] | 'all' | 'events';
 const CATEGORIES: { key: CategoryFilter; label: string; icon: keyof typeof Feather.glyphMap }[] = [
@@ -41,7 +41,14 @@ export default function ExploreMapNative({ insetTop, insetBottom }: ExploreMapPr
   const [selectedEvent, setSelectedEvent] = useState<EventResponse | null>(null);
   const [justUnlocked, setJustUnlocked] = useState<string | null>(null);
   const { zones, events, fetchEvents, isZoneUnlocked, getProgress, totalPoints, unlockZone } = useExploreStore();
+  const { accessToken } = useAuthStore();
+  const [connections, setConnections] = useState<ConnectionLocationResponse[]>([]);
   const progress = getProgress();
+
+  useEffect(() => {
+    if (!accessToken) return;
+    api.listConnectionLocations().then(data => setConnections(data.connections)).catch(() => {});
+  }, [accessToken]);
 
   React.useEffect(() => {
     fetchEvents();
@@ -50,7 +57,7 @@ export default function ExploreMapNative({ insetTop, insetBottom }: ExploreMapPr
   const filteredZones = (activeCategory === 'all')
     ? zones
     : (activeCategory === 'events' ? [] : zones.filter(z => z.category === activeCategory));
-  
+
   const filteredEvents = (activeCategory === 'all' || activeCategory === 'events')
     ? events
     : [];
@@ -142,6 +149,24 @@ export default function ExploreMapNative({ insetTop, insetBottom }: ExploreMapPr
           );
         })}
 
+        {connections.filter(c => c.latitude != null && c.longitude != null).map(conn => (
+          <Marker
+            key={`conn-${conn.id}`}
+            coordinate={{ latitude: conn.latitude!, longitude: conn.longitude! }}
+            tracksViewChanges={false}
+            onPress={() => router.push({ pathname: '/user-detail', params: { userId: conn.id, fromConnection: '1' } })}
+          >
+            <View style={s.connMarker}>
+              {conn.profile_picture_url ? (
+                <Image source={{ uri: conn.profile_picture_url }} style={s.connAvatar} />
+              ) : (
+                <Ionicons name="person" size={18} color={Brand.accent} />
+              )}
+              {conn.is_available_to_meet && <View style={s.connDot} />}
+            </View>
+          </Marker>
+        ))}
+
         {filteredEvents.map(event => {
           if (!event.latitude || !event.longitude) return null;
           const isSelected = selectedEvent?.id === event.id;
@@ -156,10 +181,10 @@ export default function ExploreMapNative({ insetTop, insetBottom }: ExploreMapPr
                 { borderColor: Brand.accent, backgroundColor: '#FFF9F0' },
                 isSelected && s.markerSel,
               ]}>
-                <Feather 
-                  name="calendar" 
-                  size={20} 
-                  color={isSelected ? Brand.accent : Brand.primary} 
+                <Feather
+                  name="calendar"
+                  size={20}
+                  color={isSelected ? Brand.accent : Brand.primary}
                 />
               </View>
             </Marker>
@@ -359,4 +384,8 @@ const s = StyleSheet.create({
   infoBtn: { width: 48, height: 48, borderRadius: Radius.md, backgroundColor: Surfaces.background, borderWidth: 1, borderColor: Surfaces.border, alignItems: 'center', justifyContent: 'center' },
   unlockMsg: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 10 },
   unlockMT: { fontFamily: Typography.fonts.h3, fontSize: 16, color: Brand.success },
+
+  connMarker: { width: 40, height: 40, borderRadius: 20, backgroundColor: Surfaces.background, borderWidth: 2, borderColor: Brand.accent, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  connAvatar: { width: 36, height: 36, borderRadius: 18 },
+  connDot: { position: 'absolute', bottom: -1, right: -1, width: 12, height: 12, borderRadius: 6, backgroundColor: Brand.success, borderWidth: 2, borderColor: Surfaces.background },
 });
