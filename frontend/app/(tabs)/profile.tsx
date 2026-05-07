@@ -5,12 +5,13 @@ import { Card } from '@/components/ui/Card';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { Brand, Radius, Spacing, Surfaces, Typography } from '@/constants/Colors';
 import { CATEGORY_COLORS } from '@/constants/Zones';
+import { api } from '@/services/api';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useExploreStore } from '@/stores/useExploreStore';
 import { useNearbyStore } from '@/stores/useNearbyStore';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     Image,
     ScrollView,
@@ -90,15 +91,40 @@ export default function ProfileScreen() {
   }, [accessToken]);
 
   const pickAvatar = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        alert('Permission required to access photos');
+        return;
+      }
 
-    if (!result.canceled) {
-      setAvatarUri(result.assets[0].uri);
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (result.canceled) return;
+
+      const localUri = result.assets[0].uri;
+
+      // Show local preview immediately
+      setAvatarUri(localUri);
+
+      // Upload to backend → stored in S3, key saved to DB
+      const updated = await api.uploadProfilePhoto(localUri);
+
+      // Replace local preview with the signed S3 URL returned by the server
+      if (updated.profile_picture_url) {
+        setAvatarUri(updated.profile_picture_url);
+      }
+
+      // Refresh auth store so the rest of the app picks up the new picture
+      await fetchUser();
+    } catch (err) {
+      console.error('Avatar upload error', err);
+      alert('Failed to upload avatar. Please try again.');
     }
   };
 

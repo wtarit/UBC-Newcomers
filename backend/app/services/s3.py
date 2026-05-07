@@ -28,3 +28,15 @@ def generate_presigned_download_url(file_key: str) -> str:
         Params={"Bucket": settings.s3_bucket_name, "Key": file_key},
         ExpiresIn=3600,
     )
+
+
+def upload_fileobj(user_id: uuid.UUID, file_obj, content_type: str = "image/jpeg") -> str:
+    """Upload a file-like object to S3 and return the generated file key."""
+    file_key = f"profile-pictures/{user_id}/{uuid.uuid4()}"
+    _client().put_object(
+        Bucket=settings.s3_bucket_name,
+        Key=file_key,
+        Body=file_obj.read(),
+        ContentType=content_type,
+    )
+    return file_key

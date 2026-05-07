@@ -122,6 +122,28 @@ export const api = {
       params: { content_type },
     }),
 
+  uploadProfilePhoto: async (localUri: string): Promise<UserResponse> => {
+    const BASE = process.env.EXPO_PUBLIC_API_URL || 'http://ubc-newcomers-alb-2075450770.us-west-2.elb.amazonaws.com';
+    const token = useAuthStore.getState().accessToken;
+    if (!token) throw new ApiError(401, 'Not authenticated');
+
+    const form = new FormData();
+    // React Native FormData accepts { uri, name, type }
+    form.append('file', { uri: localUri, name: 'avatar.jpg', type: 'image/jpeg' } as any);
+
+    const res = await fetch(`${BASE}/users/me/photo`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Upload failed' }));
+      throw new ApiError(res.status, err.detail || 'Upload failed');
+    }
+    return res.json();
+  },
+
   getStats: () => request<UserStatsResponse>('/users/me/stats'),
 
   getNearbyUsers: (radius_km = 5.0) =>

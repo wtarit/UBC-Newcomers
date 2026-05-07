@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -110,6 +110,22 @@ async def get_presigned_upload(
     current_user.profile_picture_key = file_key
     await db.commit()
     return PresignedUploadResponse(upload_url=url, file_key=file_key)
+
+
+@router.post("/me/photo", response_model=UserResponse)
+async def upload_profile_photo(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Accept a multipart file upload, store it in S3, save the key on the user record."""
+    file_key = s3.upload_fileobj(current_user.id, file.file, file.content_type or "image/jpeg")
+    current_user.profile_picture_key = file_key
+    await db.commit()
+    await db.refresh(current_user)
+    response = UserResponse.model_validate(current_user)
+    response.profile_picture_url = s3.generate_presigned_download_url(file_key)
+    return response
 
 
 @router.get("/me/stats", response_model=UserStatsResponse)
