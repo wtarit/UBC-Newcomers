@@ -82,6 +82,7 @@ export default function ExploreMapNative({ insetTop, insetBottom }: ExploreMapPr
 
   const handleEventMarkerPress = useCallback((event: EventResponse) => {
     if (!event.latitude || !event.longitude) return;
+    markerPressInFlight.current = true;
     setSelectedEvent(event);
     setSelectedZone(null);
     setJustUnlocked(null);
@@ -90,6 +91,9 @@ export default function ExploreMapNative({ insetTop, insetBottom }: ExploreMapPr
       longitude: event.longitude,
       latitudeDelta: 0.012, longitudeDelta: 0.012,
     }, 400);
+    setTimeout(() => {
+      markerPressInFlight.current = false;
+    }, 150);
   }, []);
 
   const handleUnlock = useCallback(() => {
@@ -175,6 +179,8 @@ export default function ExploreMapNative({ insetTop, insetBottom }: ExploreMapPr
               key={event.id}
               coordinate={{ latitude: event.latitude, longitude: event.longitude }}
               onPress={() => handleEventMarkerPress(event)}
+              onSelect={() => handleEventMarkerPress(event)}
+              tracksViewChanges={false}
             >
               <View style={[
                 s.marker,
