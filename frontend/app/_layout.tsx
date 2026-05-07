@@ -50,11 +50,17 @@ const AppLightTheme = {
 };
 
 function useProtectedRoute() {
-  const { accessToken, user } = useAuthStore();
+  const { accessToken, user, isRestoring, restoreSession } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
+    restoreSession();
+  }, []);
+
+  useEffect(() => {
+    if (isRestoring) return;
+
     const inAuthGroup = segments[0] === '(auth)';
     const isLoggedIn = !!accessToken;
 
@@ -67,7 +73,7 @@ function useProtectedRoute() {
         router.replace('/(tabs)');
       }
     }
-  }, [accessToken, user, segments]);
+  }, [accessToken, user, segments, isRestoring]);
 }
 
 export default function RootLayout() {
