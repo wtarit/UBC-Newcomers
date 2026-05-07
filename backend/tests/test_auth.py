@@ -86,23 +86,19 @@ class TestSignup:
         assert resp.status_code == 400
         assert "UBC email" in resp.json()["detail"]
 
-    async def test_signup_allowlisted_email_not_rejected_as_non_ubc(
-        self, unauthed_client: AsyncClient
-    ):
-        """The allowlisted Gmail address should NOT be rejected by the UBC email
-        validator.  It may still fail at the DB level if the email already exists,
-        but the 400 "Only UBC email" check must not fire."""
-        resp = await unauthed_client.post(
-            "/auth/signup",
-            json={
-                "email": "tarit.witworrasakul@gmail.com",
-                "password": "StrongPass1!",
-                "full_name": "Tarit W",
-            },
+    def test_signup_allowlisted_email_passes_cognito_validation(self):
+        """cognito.sign_up should NOT raise an HTTPException for the
+        allowlisted Gmail address.  This verifies the email bypass works
+        end-to-end through the sign_up function (without hitting the DB)."""
+        from app.services.cognito import sign_up
+
+        # sign_up calls validate_ubc_email first, then _client().sign_up.
+        # If validate_ubc_email raises, sign_up propagates the HTTPException.
+        # We only care that the email check passes -- the AWS mock handles the rest.
+        result = sign_up(
+            "tarit.witworrasakul@gmail.com", "StrongPass1!", "Tarit W"
         )
-        # Should NOT be the UBC-email-validation error
-        if resp.status_code == 400:
-            assert "UBC email" not in resp.json().get("detail", "")
+        assert result == "mock-cognito-sub-123"
 
 
 # ---------------------------------------------------------------------------
