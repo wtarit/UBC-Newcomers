@@ -63,7 +63,7 @@ export default function TabLayout() {
         options={{
           title: 'Connections',
           tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name="heart" color={color} focused={focused} />
+            <TabBarIcon name="comments" color={color} focused={focused} />
           ),
         }}
       />

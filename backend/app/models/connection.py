@@ -22,3 +22,9 @@ class Connection(Base):
 
     requester = relationship("User", foreign_keys=[requester_id], lazy="selectin")
     receiver = relationship("User", foreign_keys=[receiver_id], lazy="selectin")
+    messages = relationship(
+        "ConnectionMessage",
+        back_populates="connection",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+    )

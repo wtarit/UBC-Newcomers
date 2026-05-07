@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Switch, RefreshControl,
@@ -74,6 +74,24 @@ const pc = StyleSheet.create({
   acceptT: { fontFamily: Typography.fonts.h4, fontSize: 13, color: Surfaces.background },
 });
 
+function computeProfileScore(myUser: any, otherUser: NearbyUser): number {
+  if (!myUser) return otherUser.matchScore;
+
+  const myInterests = new Set<string>((myUser.interests || []).map((i: string) => i.toLowerCase()));
+  const otherInterests = new Set<string>((otherUser.interests || []).map((i) => i.toLowerCase()));
+  const overlap = [...myInterests].filter((i) => otherInterests.has(i)).length;
+  const union = new Set([...myInterests, ...otherInterests]).size;
+  const interestScore = union > 0 ? overlap / union : 0;
+
+  const majorScore = myUser.major && otherUser.program && myUser.major.toLowerCase() === otherUser.program.toLowerCase() ? 1 : 0;
+  const yearScore = myUser.year_standing ? Math.max(0, 1 - Math.min(Math.abs((myUser.year_standing || 1) - otherUser.year), 4) / 4) : 0;
+  const originScore = myUser.origin && otherUser.origin && myUser.origin.toLowerCase() === otherUser.origin.toLowerCase() ? 1 : 0;
+
+  const weighted = (interestScore * 0.6) + (majorScore * 0.2) + (yearScore * 0.15) + (originScore * 0.05);
+  return Math.round(weighted * 100);
+}
+
+
 function UserCard({ user, onPress }: { user: NearbyUser; onPress: () => void }) {
   return (
     <TouchableOpacity activeOpacity={0.8} onPress={onPress}>
@@ -99,7 +117,10 @@ function UserCard({ user, onPress }: { user: NearbyUser; onPress: () => void }) 
           </View>
         </View>
         <View style={cc.foot}>
-          <Text style={cc.meta}>{user.origin || 'Nearby'}</Text>
+          <View style={{ flex: 1, paddingRight: 8 }}>
+            <Text style={cc.meta}>{user.origin || 'Nearby'}</Text>
+            {user.matchReason ? <Text style={cc.reason}>{user.matchReason}</Text> : null}
+          </View>
           <MatchBadge score={user.matchScore} size="sm" />
         </View>
       </Card>
@@ -121,6 +142,7 @@ const cc = StyleSheet.create({
   tagT: { fontFamily: Typography.fonts.caption, fontSize: 11, color: Brand.primary, textTransform: 'uppercase', letterSpacing: 0.5 },
   foot: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Spacing.md, paddingTop: Spacing.sm, borderTopWidth: 1, borderTopColor: Surfaces.border },
   meta: { fontFamily: Typography.fonts.caption, fontSize: 12, color: Brand.secondary },
+  reason: { fontFamily: Typography.fonts.bodySm, fontSize: 12, color: Brand.primary, marginTop: 2 },
 });
 
 export default function NearbyScreen() {
@@ -132,16 +154,17 @@ export default function NearbyScreen() {
     startPolling, stopPolling, refreshAll,
     isLoading, locationPermissionDenied,
   } = useNearbyStore();
-  const { accessToken } = useAuthStore();
+  const { accessToken, user, fetchUser } = useAuthStore();
   const [sortBy, setSortBy] = useState<'match'|'distance'>('match');
   const [isAvailable, setIsAvailable] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (accessToken) {
-      api.getMe().then(user => setIsAvailable(user.is_available_to_meet));
+      api.getMe().then(u => setIsAvailable(u.is_available_to_meet));
+      if (!user) fetchUser();
       fetchNearbyUsers();
-      fetchMatchedUsers();
+      fetchMatchedUsers(50);
       fetchPendingConnections();
       startPolling();
     }
@@ -164,7 +187,26 @@ export default function NearbyScreen() {
     setRefreshing(false);
   };
 
-  const users = sortBy === 'match' && matchedUsers.length > 0 ? matchedUsers : nearbyUsers;
+  const users = useMemo(() => {
+    const matchedMap = new Map(matchedUsers.map((m) => [m.id, m]));
+    const mergedNearby = nearbyUsers.map((n) => {
+      const ai = matchedMap.get(n.id);
+      if (ai) {
+        return {
+          ...n,
+          matchScore: ai.matchScore,
+          matchReason: ai.matchReason,
+        };
+      }
+      return {
+        ...n,
+        matchScore: computeProfileScore(user, n),
+      };
+    });
+
+    return mergedNearby;
+  }, [nearbyUsers, matchedUsers, sortBy, user]);
+
   const sorted = [...users].sort((a,b) => sortBy==='match' ? b.matchScore-a.matchScore : a.distanceMeters-b.distanceMeters);
 
   return (

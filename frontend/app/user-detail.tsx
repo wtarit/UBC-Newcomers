@@ -20,6 +20,7 @@ export default function UserDetailScreen() {
   const { nearbyUsers, matchedUsers, sendConnectionRequest, getIntroForUser, pendingConnections, acceptConnectionRequest } = useNearbyStore();
   const [sending, setSending] = useState(false);
   const [accepted, setAccepted] = useState(false);
+  const [connectError, setConnectError] = useState<string | null>(null);
 
   const user = [...nearbyUsers, ...matchedUsers].find(u => u.id === userId);
   if (!user) return <View style={s.container}><Text style={s.err}>User not found</Text></View>;
@@ -29,7 +30,9 @@ export default function UserDetailScreen() {
 
   const handleConnect = async () => {
     setSending(true);
-    await sendConnectionRequest(user.id);
+    setConnectError(null);
+    const ok = await sendConnectionRequest(user.id);
+    if (!ok) setConnectError('Unable to send request. It may already exist.');
     setSending(false);
   };
 
@@ -62,6 +65,7 @@ export default function UserDetailScreen() {
         <Card style={s.card}>
           <Text style={s.secTitle}>About</Text>
           <Text style={s.bio}>{user.bio || 'No bio yet.'}</Text>
+          {user.matchReason ? <Text style={s.reason}>Why you match: {user.matchReason}</Text> : null}
         </Card>
 
         <Card style={s.card}>
@@ -118,12 +122,15 @@ export default function UserDetailScreen() {
               </View>
             </Card>
           ) : (
-            <Button
-              title={sending ? 'Sending...' : 'Connect'}
-              variant="primary"
-              size="lg"
-              onPress={handleConnect}
-            />
+            <>
+              <Button
+                title={sending ? 'Sending...' : 'Connect'}
+                variant="primary"
+                size="lg"
+                onPress={handleConnect}
+              />
+              {connectError ? <Text style={s.error}>{connectError}</Text> : null}
+            </>
           )}
         </View>
 
@@ -145,6 +152,7 @@ const s = StyleSheet.create({
   card: { marginTop: Spacing.md },
   secTitle: { fontFamily: Typography.fonts.h3, fontSize: 16, color: Brand.primary, marginBottom: 8 },
   bio: { fontFamily: Typography.fonts.body, fontSize: 14, color: Brand.secondary, lineHeight: 22 },
+  reason: { fontFamily: Typography.fonts.bodySm, fontSize: 13, color: Brand.primary, marginTop: 10 },
   detRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Surfaces.border },
   detIcon: { width: 28 },
   detLabel: { flex: 1, fontFamily: Typography.fonts.body, fontSize: 14, color: Brand.secondary },
@@ -155,4 +163,5 @@ const s = StyleSheet.create({
   section: { marginTop: Spacing.xl },
   sentRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   sentLabel: { fontFamily: Typography.fonts.h4, fontSize: 14, color: Brand.success },
+  error: { fontFamily: Typography.fonts.bodySm, fontSize: 13, color: Brand.error, marginTop: 8 },
 });

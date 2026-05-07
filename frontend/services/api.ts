@@ -158,6 +158,17 @@ export const api = {
 
   listPendingConnections: () =>
     request<ConnectionListResponse>('/connections/pending'),
+  getConnectionLocations: (connectionId: string) =>
+    request<ConnectionLocationPairResponse>(`/connections/${connectionId}/location`),
+  listConnectionMessages: (connectionId: string) =>
+    request<ConnectionMessageListResponse>(`/connections/${connectionId}/messages`),
+  sendConnectionMessage: (connectionId: string, body: string) =>
+    request<ConnectionMessageResponse>(`/connections/${connectionId}/messages`, { method: 'POST', body: { body } }),
+  markConnectionMet: (connectionId: string, landmark_name?: string) =>
+    request<ConnectionResponse>(
+      `/connections/${connectionId}/met${landmark_name ? `?landmark_name=${encodeURIComponent(landmark_name)}` : ''}`,
+      { method: 'PUT' },
+    ),
 
   // Matching
   getMatchedUsers: (limit = 10) =>
@@ -321,6 +332,32 @@ export interface ConnectionLocationResponse {
 
 export interface ConnectionLocationsListResponse {
   connections: ConnectionLocationResponse[];
+  total: number;
+}
+
+export interface ConnectionLocationBriefResponse {
+  user_id: string;
+  full_name: string;
+  latitude: number | null;
+  longitude: number | null;
+  last_active_at: string | null;
+}
+
+export interface ConnectionLocationPairResponse {
+  mine: ConnectionLocationBriefResponse;
+  theirs: ConnectionLocationBriefResponse;
+}
+
+export interface ConnectionMessageResponse {
+  id: string;
+  connection_id: string;
+  sender: UserPublicResponse;
+  body: string;
+  created_at: string;
+}
+
+export interface ConnectionMessageListResponse {
+  messages: ConnectionMessageResponse[];
   total: number;
 }
 
