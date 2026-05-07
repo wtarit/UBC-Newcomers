@@ -128,6 +128,7 @@ export default function ExploreMapNative({ insetTop, insetBottom }: ExploreMapPr
             key={`conn-${conn.id}`}
             coordinate={{ latitude: conn.latitude!, longitude: conn.longitude! }}
             tracksViewChanges={false}
+            onPress={() => router.push({ pathname: '/user-detail', params: { userId: conn.id, fromConnection: '1' } })}
           >
             <View style={s.connMarker}>
               {conn.profile_picture_url ? (
