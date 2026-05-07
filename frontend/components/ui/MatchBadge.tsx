@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Brand, Radius } from '@/constants/Colors';
+import { Brand, Radius, Typography } from '@/constants/Colors';
 
 interface MatchBadgeProps {
   score: number;
@@ -13,7 +13,7 @@ interface MatchBadgeProps {
 function getScoreColor(score: number): string {
   if (score >= 85) return Brand.accent;
   if (score >= 70) return Brand.primary;
-  if (score >= 50) return Brand.warm;
+  if (score >= 50) return Brand.warning;
   return Brand.error;
 }
 
@@ -53,6 +53,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   text: {
-    fontWeight: '800',
+    fontFamily: Typography.fonts.h3,
   },
 });

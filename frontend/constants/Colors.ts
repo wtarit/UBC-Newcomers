@@ -1,132 +1,102 @@
 /**
- * UBC Newcomers — Design System Colors
- * Premium dark theme with UBC-inspired accents
+ * Verdana Health Design System Constants
+ * Derived from DESIGN.md
  */
 
-// Primary brand colors
 export const Brand = {
-  // UBC blue family
-  primary: '#4F8EF7',
-  primaryLight: '#7BABFF',
-  primaryDark: '#2D6BD4',
-
-  // Accent / exploration green
-  accent: '#34D399',
-  accentLight: '#6EE7B7',
-  accentDark: '#10B981',
-
-  // Warm highlight for proximity / connections
-  warm: '#F59E0B',
-  warmLight: '#FBBF24',
-  warmDark: '#D97706',
-
-  // AI / intro purple
-  ai: '#A78BFA',
-  aiLight: '#C4B5FD',
-  aiDark: '#7C3AED',
-
-  // Status colors
-  success: '#34D399',
-  warning: '#FBBF24',
-  error: '#F87171',
-  info: '#60A5FA',
+  primary: '#0F172A',      // Primary Navy: Primary actions, strong headers
+  secondary: '#64748B',    // Secondary Slate: Secondary text, borders
+  accent: '#059669',       // Tertiary Sage: Links, CTAs, highlights
+  success: '#22C55E',      // Confirmed, healthy range
+  warning: '#EAB308',      // Pending results, caution
+  error: '#EF4444',        // Critical, out of range
+  info: '#0EA5E9',         // Informational, new feature
 };
 
-// Background system (dark mode first)
 export const Surfaces = {
-  // Main backgrounds
-  background: '#0B0F1A',
-  backgroundElevated: '#111827',
-  backgroundCard: '#1A1F2E',
-  backgroundCardHover: '#232838',
-
-  // Glass effect
-  glass: 'rgba(255, 255, 255, 0.06)',
-  glassBorder: 'rgba(255, 255, 255, 0.1)',
-  glassHighlight: 'rgba(255, 255, 255, 0.12)',
-
-  // Map overlay
-  mapOverlayLocked: 'rgba(75, 85, 99, 0.45)',
-  mapOverlayUnlocked: 'rgba(52, 211, 153, 0.2)',
-  mapOverlayActive: 'rgba(79, 142, 247, 0.3)',
+  background: '#F8FAFC',   // Page background
+  default: '#FFFFFF',      // Card backgrounds
+  border: '#E2E8F0',       // Default borders
+  borderHover: '#0F172A',  // Hover borders
 };
 
-// Text hierarchy
 export const Typography = {
-  primary: '#F9FAFB',
-  secondary: '#9CA3AF',
-  tertiary: '#6B7280',
-  inverse: '#111827',
-  accent: Brand.primary,
-  link: Brand.primaryLight,
+  fonts: {
+    display: 'PlusJakartaSans_700Bold',
+    h1: 'PlusJakartaSans_700Bold',
+    h2: 'PlusJakartaSans_600SemiBold',
+    h3: 'PlusJakartaSans_600SemiBold',
+    h4: 'PlusJakartaSans_500Medium',
+    bodyLg: 'DMSans_400Regular',
+    body: 'DMSans_400Regular',
+    bodySm: 'DMSans_400Regular',
+    caption: 'DMSans_500Medium',
+    code: 'FiraCode_400Regular',
+  },
+  sizes: {
+    display: { fontSize: 40, lineHeight: 46 }, // 1.15 line height approx
+    h1: { fontSize: 32, lineHeight: 38.4 },
+    h2: { fontSize: 24, lineHeight: 30 },
+    h3: { fontSize: 20, lineHeight: 26 },
+    h4: { fontSize: 16, lineHeight: 21.6 },
+    bodyLg: { fontSize: 18, lineHeight: 28.8 },
+    body: { fontSize: 16, lineHeight: 25.6 },
+    bodySm: { fontSize: 14, lineHeight: 21 },
+    caption: { fontSize: 12, lineHeight: 16.8 },
+    code: { fontSize: 14, lineHeight: 22.4 },
+  },
+  colors: {
+    primary: '#0F172A',
+    secondary: '#64748B',
+    accent: '#059669',
+  }
 };
 
-// Gradient presets (for LinearGradient)
-export const Gradients = {
-  primary: [Brand.primary, Brand.primaryDark] as const,
-  accent: [Brand.accent, Brand.accentDark] as const,
-  warm: ['#F59E0B', '#EF4444'] as const,
-  ai: [Brand.ai, Brand.aiDark] as const,
-  dark: ['#1A1F2E', '#0B0F1A'] as const,
-  card: ['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.02)'] as const,
-  heroOverlay: ['rgba(11,15,26,0)', 'rgba(11,15,26,0.95)'] as const,
-};
-
-// Spacing system (4px base)
 export const Spacing = {
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-  xxl: 48,
-  xxxl: 64,
+  xs: 4,     // Inline icon gaps
+  sm: 8,     // Tight component padding
+  md: 16,    // Default padding
+  lg: 24,    // Card padding
+  xl: 32,    // Section gaps
+  xxl: 48,   // Layout sections
+  xxxl: 64,  // Page-level spacing
 };
 
-// Border radius
 export const Radius = {
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
-  full: 9999,
+  sm: 4,     // Badges, small tags
+  DEFAULT: 8, // Buttons, cards, inputs
+  md: 12,    // Modals, dropdown panels
+  lg: 16,    // Large containers, hero sections
+  full: 9999, // Avatars, status indicators
 };
 
-// Shadows
 export const Shadows = {
-  card: {
-    shadowColor: '#000',
+  sm: {
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  DEFAULT: {
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  md: {
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
+    shadowOpacity: 0.07,
+    shadowRadius: 16,
+    elevation: 4,
+  },
+  lg: {
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.10,
+    shadowRadius: 32,
     elevation: 8,
-  },
-  glow: (color: string) => ({
-    shadowColor: color,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 12,
-  }),
-};
-
-// Kept for compatibility with Expo template
-const tintColorLight = Brand.primary;
-const tintColorDark = '#fff';
-
-export default {
-  light: {
-    text: '#000',
-    background: '#fff',
-    tint: tintColorLight,
-    tabIconDefault: '#ccc',
-    tabIconSelected: tintColorLight,
-  },
-  dark: {
-    text: '#fff',
-    background: Surfaces.background,
-    tint: tintColorDark,
-    tabIconDefault: '#6B7280',
-    tabIconSelected: Brand.primary,
   },
 };

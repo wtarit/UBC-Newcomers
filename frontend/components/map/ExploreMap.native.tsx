@@ -3,26 +3,16 @@
  */
 import React, { useState, useCallback, useRef } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView,
 } from 'react-native';
 import MapView, { Marker, Circle } from 'react-native-maps';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 
 import { Brand, Surfaces, Typography, Spacing, Radius, Shadows } from '@/constants/Colors';
 import { EXPLORE_ZONES, CATEGORY_COLORS, UBC_CENTER, type ExploreZone } from '@/constants/Zones';
 import { useExploreStore } from '@/stores/useExploreStore';
-
-const DARK_MAP_STYLE = [
-  { elementType: 'geometry', stylers: [{ color: '#1d2c4d' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#8ec3b9' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#1a3646' }] },
-  { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#283d6a' }] },
-  { featureType: 'poi.park', elementType: 'geometry.fill', stylers: [{ color: '#023e58' }] },
-  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#304a7d' }] },
-  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#2c6675' }] },
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0e1626' }] },
-];
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 
 type CategoryFilter = ExploreZone['category'] | 'all';
 const CATEGORIES: { key: CategoryFilter; label: string; emoji: string }[] = [
@@ -71,7 +61,6 @@ export default function ExploreMapNative({ insetTop, insetBottom }: ExploreMapPr
         ref={mapRef}
         style={StyleSheet.absoluteFillObject}
         initialRegion={UBC_CENTER}
-        customMapStyle={DARK_MAP_STYLE}
         showsUserLocation
         showsMyLocationButton={false}
         showsCompass={false}
@@ -86,8 +75,8 @@ export default function ExploreMapNative({ insetTop, insetBottom }: ExploreMapPr
               <Circle
                 center={{ latitude: zone.latitude, longitude: zone.longitude }}
                 radius={zone.radiusMeters}
-                fillColor={unlocked ? 'rgba(52,211,153,0.15)' : `${catColor}20`}
-                strokeColor={unlocked ? 'rgba(52,211,153,0.4)' : `${catColor}50`}
+                fillColor={unlocked ? 'rgba(34,197,94,0.15)' : `${catColor}15`}
+                strokeColor={unlocked ? 'rgba(34,197,94,0.4)' : `${catColor}40`}
                 strokeWidth={isSelected ? 2.5 : 1}
               />
               <Marker
@@ -109,14 +98,14 @@ export default function ExploreMapNative({ insetTop, insetBottom }: ExploreMapPr
         <View style={s.stats}>
           <View style={s.si}><Text style={s.sv}>{progress.percentage}%</Text><Text style={s.sl}>Explored</Text></View>
           <View style={s.div} />
-          <View style={s.si}><Text style={[s.sv, { color: Brand.warm }]}>{totalPoints}</Text><Text style={s.sl}>Points</Text></View>
+          <View style={s.si}><Text style={[s.sv, { color: Brand.warning }]}>{totalPoints}</Text><Text style={s.sl}>Points</Text></View>
           <View style={s.div} />
           <View style={s.si}><Text style={[s.sv, { color: Brand.accent }]}>{progress.unlocked}/{progress.total}</Text><Text style={s.sl}>Zones</Text></View>
         </View>
       </View>
 
       {/* Filters */}
-      <View style={[s.filterC, { top: insetTop + 64 }]}>
+      <View style={[s.filterC, { top: insetTop + 68 }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterR}>
           {CATEGORIES.map(cat => (
             <TouchableOpacity key={cat.key} onPress={() => setActiveCategory(cat.key)} activeOpacity={0.7}>
@@ -136,47 +125,55 @@ export default function ExploreMapNative({ insetTop, insetBottom }: ExploreMapPr
 
       {/* Bottom card */}
       {selectedZone && (
-        <View style={[s.btmCard, { paddingBottom: insetBottom + 12 }]}>
-          <View style={s.handle} />
-          <View style={s.cardH}>
-            <View style={[s.cardE, { backgroundColor: `${CATEGORY_COLORS[selectedZone.category]}20` }]}>
-              <Text style={{ fontSize: 26 }}>{selectedZone.emoji}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <View style={s.cardNR}>
-                <Text style={s.cardN}>{selectedZone.name}</Text>
-                {isZoneUnlocked(selectedZone.id) && <View style={s.expB}><Text style={s.expBT}>✓ Explored</Text></View>}
+        <View style={[s.btmWrap, { paddingBottom: insetBottom + 12 }]}>
+          <Card variant="elevated" style={s.btmCard} noPadding>
+            <View style={s.handle} />
+            <View style={{ padding: Spacing.lg }}>
+              <View style={s.cardH}>
+                <View style={[s.cardE, { backgroundColor: `${CATEGORY_COLORS[selectedZone.category]}15` }]}>
+                  <Text style={{ fontSize: 26 }}>{selectedZone.emoji}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={s.cardNR}>
+                    <Text style={s.cardN}>{selectedZone.name}</Text>
+                    {isZoneUnlocked(selectedZone.id) && <View style={s.expB}><Text style={s.expBT}>✓ Explored</Text></View>}
+                  </View>
+                  <Text style={s.cardD} numberOfLines={2}>{selectedZone.description}</Text>
+                </View>
               </View>
-              <Text style={s.cardD} numberOfLines={2}>{selectedZone.description}</Text>
-            </View>
-          </View>
-          <View style={s.cardM}>
-            <View style={[s.catTag, { backgroundColor: `${CATEGORY_COLORS[selectedZone.category]}20` }]}>
-              <Text style={[s.catTT, { color: CATEGORY_COLORS[selectedZone.category] }]}>{selectedZone.category}</Text>
-            </View>
-            <Text style={s.radT}>📍 {selectedZone.radiusMeters}m</Text>
-            <View style={s.ptB}><Text style={s.ptT}>+{selectedZone.points} pts</Text></View>
-          </View>
-          <View style={s.acts}>
-            {justUnlocked === selectedZone.id ? (
-              <View style={s.unlockMsg}><Text style={{ fontSize: 24 }}>🎉</Text><Text style={s.unlockMT}>Zone Unlocked! +{selectedZone.points} pts</Text></View>
-            ) : isZoneUnlocked(selectedZone.id) ? (
-              <TouchableOpacity style={s.detBtn} onPress={() => router.push({ pathname: '/zone-detail', params: { zoneId: selectedZone.id } })} activeOpacity={0.8}>
-                <Text style={s.detBtnT}>View Details</Text>
-              </TouchableOpacity>
-            ) : (
-              <View style={s.actRow}>
-                <TouchableOpacity style={s.unlockBtn} onPress={handleUnlock} activeOpacity={0.8}>
-                  <LinearGradient colors={[Brand.accent, Brand.accentDark]} style={s.unlockG}>
-                    <Text style={s.unlockBT}>🔓 Unlock Zone</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-                <TouchableOpacity style={s.infoBtn} onPress={() => router.push({ pathname: '/zone-detail', params: { zoneId: selectedZone.id } })} activeOpacity={0.8}>
-                  <Text style={{ fontSize: 20 }}>ℹ️</Text>
-                </TouchableOpacity>
+              <View style={s.cardM}>
+                <View style={[s.catTag, { backgroundColor: `${CATEGORY_COLORS[selectedZone.category]}15` }]}>
+                  <Text style={[s.catTT, { color: CATEGORY_COLORS[selectedZone.category] }]}>{selectedZone.category}</Text>
+                </View>
+                <Text style={s.radT}>📍 {selectedZone.radiusMeters}m</Text>
+                <View style={s.ptB}><Text style={s.ptT}>+{selectedZone.points} pts</Text></View>
               </View>
-            )}
-          </View>
+              <View style={s.acts}>
+                {justUnlocked === selectedZone.id ? (
+                  <View style={s.unlockMsg}><Text style={{ fontSize: 24 }}>🎉</Text><Text style={s.unlockMT}>Zone Unlocked! +{selectedZone.points} pts</Text></View>
+                ) : isZoneUnlocked(selectedZone.id) ? (
+                  <Button 
+                    title="View Details" 
+                    variant="secondary" 
+                    onPress={() => router.push({ pathname: '/zone-detail', params: { zoneId: selectedZone.id } })} 
+                  />
+                ) : (
+                  <View style={s.actRow}>
+                    <Button 
+                      title="Unlock Zone" 
+                      variant="primary" 
+                      style={{ flex: 1 }}
+                      icon="🔓"
+                      onPress={handleUnlock} 
+                    />
+                    <TouchableOpacity style={s.infoBtn} onPress={() => router.push({ pathname: '/zone-detail', params: { zoneId: selectedZone.id } })} activeOpacity={0.8}>
+                      <Text style={{ fontSize: 20 }}>ℹ️</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            </View>
+          </Card>
         </View>
       )}
     </View>
@@ -185,49 +182,49 @@ export default function ExploreMapNative({ insetTop, insetBottom }: ExploreMapPr
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: Surfaces.background },
-  marker: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(17,24,39,0.92)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.2)', ...Shadows.card },
-  markerSel: { borderColor: Brand.primary, backgroundColor: 'rgba(79,142,247,0.25)', transform: [{ scale: 1.15 }] },
-  markerDone: { borderColor: Brand.accent, backgroundColor: 'rgba(52,211,153,0.2)' },
+  marker: { width: 44, height: 44, borderRadius: Radius.full, backgroundColor: Surfaces.default, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Surfaces.border, ...Shadows.sm },
+  markerSel: { borderColor: Brand.primary, borderWidth: 2, transform: [{ scale: 1.15 }], ...Shadows.md },
+  markerDone: { borderColor: Brand.success, backgroundColor: '#F0FDF4' },
   markerE: { fontSize: 22 },
-  chk: { position: 'absolute', top: -4, right: -4, width: 16, height: 16, borderRadius: 8, backgroundColor: Brand.accent, alignItems: 'center', justifyContent: 'center' },
+  chk: { position: 'absolute', top: -4, right: -4, width: 16, height: 16, borderRadius: 8, backgroundColor: Brand.success, alignItems: 'center', justifyContent: 'center' },
   chkT: { fontSize: 9, color: '#fff', fontWeight: '800' },
+  
   topBar: { position: 'absolute', left: 16, right: 16, zIndex: 10 },
-  stats: { flexDirection: 'row', backgroundColor: 'rgba(17,24,39,0.92)', borderRadius: Radius.lg, paddingVertical: 10, paddingHorizontal: 16, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', ...Shadows.card },
+  stats: { flexDirection: 'row', backgroundColor: Surfaces.default, borderRadius: Radius.lg, paddingVertical: 10, paddingHorizontal: 16, alignItems: 'center', borderWidth: 1, borderColor: Surfaces.border, ...Shadows.DEFAULT },
   si: { flex: 1, alignItems: 'center' },
-  sv: { fontSize: 18, fontWeight: '800', color: Brand.primary },
-  sl: { fontSize: 10, color: Typography.tertiary, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 1 },
-  div: { width: 1, height: 28, backgroundColor: 'rgba(255,255,255,0.08)' },
+  sv: { fontFamily: Typography.fonts.h3, fontSize: 18, color: Brand.primary },
+  sl: { fontFamily: Typography.fonts.caption, fontSize: 10, color: Brand.secondary, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 1 },
+  div: { width: 1, height: 28, backgroundColor: Surfaces.border },
+  
   filterC: { position: 'absolute', left: 0, right: 0, zIndex: 10 },
   filterR: { paddingHorizontal: 16, gap: 8 },
-  pill: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: Radius.full, backgroundColor: 'rgba(17,24,39,0.88)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', gap: 5 },
-  pillA: { backgroundColor: `${Brand.primary}35`, borderColor: `${Brand.primary}70` },
+  pill: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: Radius.full, backgroundColor: Surfaces.default, borderWidth: 1, borderColor: Surfaces.border, gap: 5, ...Shadows.sm },
+  pillA: { backgroundColor: Brand.primary, borderColor: Brand.primary },
   pillE: { fontSize: 13 },
-  pillL: { fontSize: 12, fontWeight: '600', color: Typography.secondary },
-  pillLA: { color: Brand.primaryLight },
-  recenter: { position: 'absolute', right: 16, width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(17,24,39,0.92)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', zIndex: 10, ...Shadows.card },
-  btmCard: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(17,24,39,0.96)', borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl, paddingHorizontal: 20, paddingTop: 12, borderTopWidth: 1, borderColor: 'rgba(255,255,255,0.08)', ...Shadows.card },
-  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.15)', alignSelf: 'center', marginBottom: 12 },
+  pillL: { fontFamily: Typography.fonts.bodySm, fontSize: 13, color: Brand.primary },
+  pillLA: { color: Surfaces.default },
+  
+  recenter: { position: 'absolute', right: 16, width: 44, height: 44, borderRadius: 22, backgroundColor: Surfaces.default, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Surfaces.border, zIndex: 10, ...Shadows.DEFAULT },
+  
+  btmWrap: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 16 },
+  btmCard: { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
+  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: Surfaces.border, alignSelf: 'center', marginTop: 12, marginBottom: 8 },
   cardH: { flexDirection: 'row', gap: 14 },
   cardE: { width: 52, height: 52, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
   cardNR: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  cardN: { fontSize: 17, fontWeight: '700', color: Typography.primary },
-  expB: { backgroundColor: `${Brand.accent}20`, paddingHorizontal: 8, paddingVertical: 2, borderRadius: Radius.full },
-  expBT: { fontSize: 11, fontWeight: '700', color: Brand.accent },
-  cardD: { fontSize: 13, color: Typography.secondary, marginTop: 4, lineHeight: 18 },
+  cardN: { fontFamily: Typography.fonts.h3, fontSize: 18, color: Brand.primary },
+  expB: { backgroundColor: `${Brand.success}15`, paddingHorizontal: 8, paddingVertical: 2, borderRadius: Radius.sm },
+  expBT: { fontFamily: Typography.fonts.caption, fontSize: 11, color: Brand.success },
+  cardD: { fontFamily: Typography.fonts.bodySm, fontSize: 14, color: Brand.secondary, marginTop: 4, lineHeight: 20 },
   cardM: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 },
-  catTag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.full },
-  catTT: { fontSize: 11, fontWeight: '700', textTransform: 'capitalize' },
-  radT: { fontSize: 12, color: Typography.tertiary },
-  ptB: { backgroundColor: `${Brand.warm}20`, paddingHorizontal: 10, paddingVertical: 3, borderRadius: Radius.full, marginLeft: 'auto' },
-  ptT: { fontSize: 12, fontWeight: '800', color: Brand.warm },
-  acts: { marginTop: 14 },
+  catTag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.sm },
+  catTT: { fontFamily: Typography.fonts.caption, fontSize: 11, textTransform: 'capitalize' },
+  radT: { fontFamily: Typography.fonts.bodySm, fontSize: 12, color: Brand.secondary },
+  ptB: { backgroundColor: `${Brand.warning}15`, paddingHorizontal: 10, paddingVertical: 3, borderRadius: Radius.sm, marginLeft: 'auto' },
+  ptT: { fontFamily: Typography.fonts.caption, fontSize: 12, color: Brand.warning },
+  acts: { marginTop: 16 },
   actRow: { flexDirection: 'row', gap: 10 },
-  unlockBtn: { flex: 1, borderRadius: Radius.full, overflow: 'hidden' },
-  unlockG: { paddingVertical: 13, alignItems: 'center', borderRadius: Radius.full },
-  unlockBT: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  infoBtn: { width: 48, height: 48, borderRadius: 24, backgroundColor: Surfaces.glass, borderWidth: 1, borderColor: Surfaces.glassBorder, alignItems: 'center', justifyContent: 'center' },
-  detBtn: { backgroundColor: `${Brand.primary}20`, borderWidth: 1, borderColor: `${Brand.primary}50`, paddingVertical: 13, borderRadius: Radius.full, alignItems: 'center' },
-  detBtnT: { color: Brand.primary, fontSize: 15, fontWeight: '700' },
+  infoBtn: { width: 42, height: 42, borderRadius: Radius.DEFAULT, backgroundColor: Surfaces.default, borderWidth: 1, borderColor: Surfaces.border, alignItems: 'center', justifyContent: 'center' },
   unlockMsg: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 10 },
-  unlockMT: { fontSize: 16, fontWeight: '800', color: Brand.accent },
+  unlockMT: { fontFamily: Typography.fonts.h3, fontSize: 16, color: Brand.success },
 });

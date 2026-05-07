@@ -24,8 +24,8 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Brand.primary,
-        tabBarInactiveTintColor: Typography.tertiary,
+        tabBarActiveTintColor: Brand.accent,
+        tabBarInactiveTintColor: Brand.secondary,
         tabBarStyle: styles.tabBar,
         tabBarLabelStyle: styles.tabLabel,
         tabBarItemStyle: styles.tabItem,
@@ -70,29 +70,35 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: Surfaces.backgroundElevated,
+    backgroundColor: Surfaces.default,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
+    borderTopColor: Surfaces.border,
     height: Platform.OS === 'ios' ? 88 : 68,
     paddingBottom: Platform.OS === 'ios' ? 28 : 8,
     paddingTop: 8,
+    elevation: 8,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
   },
   tabLabel: {
+    fontFamily: Typography.fonts.caption,
     fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
+    marginTop: 2,
   },
   tabItem: {
-    gap: 4,
+    gap: 2,
   },
   iconWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 40,
-    height: 28,
-    borderRadius: 14,
+    width: 44,
+    height: 30,
+    borderRadius: 15,
   },
   iconWrapActive: {
-    backgroundColor: `${Brand.primary}20`,
+    backgroundColor: `${Brand.accent}15`,
   },
 });

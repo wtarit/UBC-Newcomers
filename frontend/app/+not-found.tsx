@@ -20,7 +20,7 @@ export default function NotFoundScreen() {
 const s = StyleSheet.create({
   container: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Surfaces.background, padding: Spacing.lg },
   emoji: { fontSize: 64, marginBottom: Spacing.md },
-  title: { fontSize: 20, fontWeight: '700', color: Typography.primary },
+  title: { fontFamily: Typography.fonts.h3, fontSize: 20, color: Brand.primary },
   link: { marginTop: Spacing.lg },
-  linkText: { fontSize: 16, color: Brand.primary, fontWeight: '600' },
+  linkText: { fontFamily: Typography.fonts.h4, fontSize: 16, color: Brand.accent },
 });

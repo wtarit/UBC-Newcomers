@@ -1,19 +1,18 @@
 /**
- * User Detail Modal — Nearby user profile + AI intro
+ * User Detail Modal — Nearby user profile + AI intro (Verdana Health)
  */
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Brand, Surfaces, Typography, Spacing, Radius } from '@/constants/Colors';
 import { useNearbyStore } from '@/stores/useNearbyStore';
 import { MOCK_NEARBY_USERS } from '@/constants/MockUsers';
-import { GlassCard } from '@/components/ui/GlassCard';
+import { Card } from '@/components/ui/Card';
 import { MatchBadge } from '@/components/ui/MatchBadge';
-import { PillButton } from '@/components/ui/PillButton';
+import { Button } from '@/components/ui/Button';
 
 export default function UserDetailScreen() {
   const { userId } = useLocalSearchParams<{ userId: string }>();
@@ -46,23 +45,25 @@ export default function UserDetailScreen() {
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         {/* Hero */}
-        <LinearGradient colors={[`${Brand.ai}15`, 'transparent']} style={s.hero}>
+        <View style={s.hero}>
           <View style={s.avatarWrap}>
             <Text style={s.avatar}>{user.avatar}</Text>
           </View>
           <Text style={s.name}>{user.displayName}</Text>
           <Text style={s.prog}>{user.program} · Year {user.year}</Text>
-          <MatchBadge score={user.matchScore} size="lg" />
-        </LinearGradient>
+          <View style={{ marginTop: Spacing.sm }}>
+            <MatchBadge score={user.matchScore} size="lg" />
+          </View>
+        </View>
 
         {/* Bio */}
-        <GlassCard variant="elevated" style={s.card}>
+        <Card variant="elevated" style={s.card}>
           <Text style={s.secTitle}>About</Text>
           <Text style={s.bio}>{user.bio}</Text>
-        </GlassCard>
+        </Card>
 
         {/* Details */}
-        <GlassCard variant="elevated" style={s.card}>
+        <Card variant="elevated" style={s.card}>
           <View style={s.detRow}>
             <Text style={s.detIcon}>📍</Text>
             <Text style={s.detLabel}>Distance</Text>
@@ -83,35 +84,35 @@ export default function UserDetailScreen() {
             <Text style={s.detLabel}>Zones Explored</Text>
             <Text style={[s.detVal, { color: Brand.accent }]}>{user.zonesExplored}</Text>
           </View>
-        </GlassCard>
+        </Card>
 
         {/* Interests */}
-        <GlassCard variant="elevated" style={s.card}>
+        <Card variant="elevated" style={s.card}>
           <Text style={s.secTitle}>Interests</Text>
           <View style={s.tags}>
             {user.interests.map(i => (
               <View key={i} style={s.tag}><Text style={s.tagT}>{i}</Text></View>
             ))}
           </View>
-        </GlassCard>
+        </Card>
 
         {/* AI Introduction */}
         <View style={s.section}>
           <Text style={s.secTitle}>✨ AI Introduction</Text>
           {existingIntro || sent ? (
-            <GlassCard variant="highlight" style={{ borderColor: `${Brand.accent}40` }}>
+            <Card style={{ backgroundColor: '#F0FDF4', borderColor: Brand.success }}>
               <Text style={s.sentLabel}>✅ Introduction sent!</Text>
               <Text style={s.sentMsg}>{existingIntro?.message || 'Message sent successfully'}</Text>
-            </GlassCard>
+            </Card>
           ) : previewMsg ? (
             <View>
-              <GlassCard variant="highlight" style={{ borderColor: `${Brand.ai}40` }}>
+              <Card style={{ backgroundColor: `${Brand.info}10`, borderColor: Brand.info }}>
                 <Text style={s.previewLabel}>Preview</Text>
                 <Text style={s.previewMsg}>{previewMsg}</Text>
-              </GlassCard>
+              </Card>
               <View style={s.btnRow}>
-                <PillButton title="🔄  Regenerate" variant="outline" size="sm" onPress={handleGenerateIntro} />
-                <PillButton title="📨  Send" variant="ai" size="sm" onPress={handleSend} />
+                <Button title="Regenerate" variant="secondary" size="md" onPress={handleGenerateIntro} style={{ flex: 1 }} />
+                <Button title="Send" variant="primary" icon="📨" size="md" onPress={handleSend} style={{ flex: 1 }} />
               </View>
             </View>
           ) : (
@@ -119,9 +120,10 @@ export default function UserDetailScreen() {
               <Text style={s.aiDesc}>
                 Let our AI craft a personalized introduction based on your shared interests and profiles.
               </Text>
-              <PillButton
-                title="🤖  Generate AI Introduction"
-                variant="ai"
+              <Button
+                title="Generate AI Introduction"
+                variant="primary"
+                icon="🤖"
                 size="lg"
                 onPress={handleGenerateIntro}
               />
@@ -132,7 +134,7 @@ export default function UserDetailScreen() {
         {/* Action buttons */}
         {!existingIntro && !sent && (
           <View style={s.actions}>
-            <PillButton title="👋  Wave Hello" variant="warm" size="md" onPress={() => {}} />
+            <Button title="Wave Hello 👋" variant="secondary" size="md" onPress={() => {}} />
           </View>
         )}
 
@@ -145,30 +147,30 @@ export default function UserDetailScreen() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: Surfaces.background },
   scroll: { paddingHorizontal: Spacing.lg },
-  err: { color: Typography.primary, fontSize: 16, textAlign: 'center', marginTop: 100 },
-  closeBtn: { position: 'absolute', top: 56, right: 20, zIndex: 10, width: 36, height: 36, borderRadius: 18, backgroundColor: Surfaces.glass, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Surfaces.glassBorder },
-  closeTxt: { color: Typography.primary, fontSize: 18 },
-  hero: { alignItems: 'center', paddingVertical: Spacing.xl, marginHorizontal: -Spacing.lg, paddingHorizontal: Spacing.lg, gap: Spacing.sm },
-  avatarWrap: { width: 96, height: 96, borderRadius: 48, backgroundColor: `${Brand.ai}20`, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: `${Brand.ai}60` },
+  err: { fontFamily: Typography.fonts.body, color: Brand.primary, fontSize: 16, textAlign: 'center', marginTop: 100 },
+  closeBtn: { position: 'absolute', top: 56, right: 20, zIndex: 10, width: 36, height: 36, borderRadius: 18, backgroundColor: Surfaces.default, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Surfaces.border },
+  closeTxt: { color: Brand.primary, fontSize: 16, fontWeight: '600' },
+  hero: { alignItems: 'center', paddingVertical: Spacing.xl, marginHorizontal: -Spacing.lg, paddingHorizontal: Spacing.lg, backgroundColor: Surfaces.default, borderBottomWidth: 1, borderBottomColor: Surfaces.border, gap: Spacing.xs },
+  avatarWrap: { width: 96, height: 96, borderRadius: 48, backgroundColor: Surfaces.background, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: Brand.primary, marginBottom: Spacing.sm },
   avatar: { fontSize: 52 },
-  name: { fontSize: 26, fontWeight: '800', color: Typography.primary },
-  prog: { fontSize: 15, color: Typography.secondary },
+  name: { fontFamily: Typography.fonts.h1, fontSize: 26, color: Brand.primary },
+  prog: { fontFamily: Typography.fonts.body, fontSize: 15, color: Brand.secondary },
   card: { marginTop: Spacing.md },
-  secTitle: { fontSize: 16, fontWeight: '700', color: Typography.primary, marginBottom: 8 },
-  bio: { fontSize: 14, color: Typography.secondary, lineHeight: 20 },
-  detRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)' },
+  secTitle: { fontFamily: Typography.fonts.h3, fontSize: 16, color: Brand.primary, marginBottom: 8 },
+  bio: { fontFamily: Typography.fonts.body, fontSize: 14, color: Brand.secondary, lineHeight: 22 },
+  detRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Surfaces.border },
   detIcon: { fontSize: 16, width: 28 },
-  detLabel: { flex: 1, fontSize: 14, color: Typography.secondary },
-  detVal: { fontSize: 14, fontWeight: '700', color: Typography.primary },
+  detLabel: { flex: 1, fontFamily: Typography.fonts.body, fontSize: 14, color: Brand.secondary },
+  detVal: { fontFamily: Typography.fonts.h4, fontSize: 14, color: Brand.primary },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  tag: { backgroundColor: `${Brand.ai}15`, paddingHorizontal: 12, paddingVertical: 4, borderRadius: Radius.full },
-  tagT: { fontSize: 12, color: Brand.aiLight, fontWeight: '600' },
+  tag: { backgroundColor: `${Brand.primary}10`, paddingHorizontal: 12, paddingVertical: 4, borderRadius: Radius.sm },
+  tagT: { fontFamily: Typography.fonts.caption, fontSize: 12, color: Brand.primary, textTransform: 'uppercase', letterSpacing: 0.5 },
   section: { marginTop: Spacing.xl },
-  aiDesc: { fontSize: 14, color: Typography.secondary, lineHeight: 20, marginBottom: Spacing.md },
-  previewLabel: { fontSize: 12, fontWeight: '700', color: Brand.ai, marginBottom: 6 },
-  previewMsg: { fontSize: 14, color: Typography.primary, lineHeight: 20 },
-  btnRow: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.md, justifyContent: 'center' },
-  sentLabel: { fontSize: 14, fontWeight: '700', color: Brand.accent, marginBottom: 6 },
-  sentMsg: { fontSize: 13, color: Typography.secondary, lineHeight: 18 },
+  aiDesc: { fontFamily: Typography.fonts.body, fontSize: 14, color: Brand.secondary, lineHeight: 22, marginBottom: Spacing.md },
+  previewLabel: { fontFamily: Typography.fonts.h4, fontSize: 12, color: Brand.info, marginBottom: 6 },
+  previewMsg: { fontFamily: Typography.fonts.body, fontSize: 14, color: Brand.primary, lineHeight: 22 },
+  btnRow: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.md },
+  sentLabel: { fontFamily: Typography.fonts.h4, fontSize: 14, color: Brand.success, marginBottom: 6 },
+  sentMsg: { fontFamily: Typography.fonts.body, fontSize: 13, color: Brand.secondary, lineHeight: 20 },
   actions: { marginTop: Spacing.xl, alignItems: 'center' },
 });

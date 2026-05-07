@@ -1,18 +1,17 @@
 /**
- * Zone Detail Modal — Shows zone info and unlock action
+ * Zone Detail Modal — Shows zone info and unlock action (Verdana Health)
  */
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams, router } from 'expo-router';
+import { router as expoRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Brand, Surfaces, Typography, Spacing, Radius } from '@/constants/Colors';
 import { EXPLORE_ZONES, CATEGORY_COLORS } from '@/constants/Zones';
 import { useExploreStore } from '@/stores/useExploreStore';
-import { GlassCard } from '@/components/ui/GlassCard';
-import { PillButton } from '@/components/ui/PillButton';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 
 export default function ZoneDetailScreen() {
   const { zoneId } = useLocalSearchParams<{ zoneId: string }>();
@@ -34,34 +33,34 @@ export default function ZoneDetailScreen() {
   return (
     <View style={[s.container, { paddingTop: insets.top }]}>
       {/* Close button */}
-      <TouchableOpacity style={s.closeBtn} onPress={() => router.back()}>
+      <TouchableOpacity style={s.closeBtn} onPress={() => expoRouter.back()}>
         <Text style={s.closeTxt}>✕</Text>
       </TouchableOpacity>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         {/* Hero */}
-        <LinearGradient colors={[`${catColor}20`, 'transparent']} style={s.hero}>
+        <View style={[s.hero, { backgroundColor: `${catColor}15` }]}>
           <Text style={s.emoji}>{zone.emoji}</Text>
           <Text style={s.name}>{zone.name}</Text>
-          <View style={[s.catTag, { backgroundColor: `${catColor}20` }]}>
+          <View style={[s.catTag, { backgroundColor: `${catColor}25` }]}>
             <Text style={[s.catTxt, { color: catColor }]}>{zone.category}</Text>
           </View>
-        </LinearGradient>
+        </View>
 
         {/* Description */}
-        <GlassCard variant="elevated" style={s.card}>
+        <Card variant="elevated" style={s.card}>
           <Text style={s.secTitle}>About this place</Text>
           <Text style={s.desc}>{zone.description}</Text>
-        </GlassCard>
+        </Card>
 
         {/* Fun Fact */}
-        <GlassCard variant="highlight" style={s.card}>
+        <Card style={[s.card, { backgroundColor: `${Brand.warning}10`, borderColor: Brand.warning }]}>
           <Text style={s.factLabel}>💡 Fun Fact</Text>
           <Text style={s.fact}>{zone.funFact}</Text>
-        </GlassCard>
+        </Card>
 
         {/* Details */}
-        <GlassCard variant="elevated" style={s.card}>
+        <Card variant="elevated" style={s.card}>
           <View style={s.detailRow}>
             <Text style={s.detailIcon}>📍</Text>
             <Text style={s.detailLabel}>Radius</Text>
@@ -70,14 +69,14 @@ export default function ZoneDetailScreen() {
           <View style={s.detailRow}>
             <Text style={s.detailIcon}>⭐</Text>
             <Text style={s.detailLabel}>Points</Text>
-            <Text style={[s.detailVal, { color: Brand.warm }]}>+{zone.points}</Text>
+            <Text style={[s.detailVal, { color: Brand.warning }]}>+{zone.points}</Text>
           </View>
           <View style={s.detailRow}>
             <Text style={s.detailIcon}>📌</Text>
             <Text style={s.detailLabel}>Coordinates</Text>
             <Text style={s.detailVal}>{zone.latitude.toFixed(4)}, {zone.longitude.toFixed(4)}</Text>
           </View>
-        </GlassCard>
+        </Card>
 
         {/* Unlock / Status */}
         <View style={s.actionArea}>
@@ -88,14 +87,15 @@ export default function ZoneDetailScreen() {
               <Text style={s.unlockedSub}>+{zone.points} points earned</Text>
             </View>
           ) : unlocked ? (
-            <GlassCard style={s.exploredCard}>
+            <Card style={s.exploredCard}>
               <Text style={s.exploredTxt}>✅ You've explored this zone!</Text>
-            </GlassCard>
+            </Card>
           ) : (
             <View>
-              <PillButton
-                title="🔓  Unlock This Zone"
-                variant="accent"
+              <Button
+                title="Unlock This Zone"
+                variant="primary"
+                icon="🔓"
                 size="lg"
                 onPress={handleUnlock}
               />
@@ -115,29 +115,29 @@ export default function ZoneDetailScreen() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: Surfaces.background },
   scroll: { paddingHorizontal: Spacing.lg },
-  err: { color: Typography.primary, fontSize: 16, textAlign: 'center', marginTop: 100 },
-  closeBtn: { position: 'absolute', top: 56, right: 20, zIndex: 10, width: 36, height: 36, borderRadius: 18, backgroundColor: Surfaces.glass, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Surfaces.glassBorder },
-  closeTxt: { color: Typography.primary, fontSize: 18 },
-  hero: { alignItems: 'center', paddingVertical: Spacing.xxl, marginHorizontal: -Spacing.lg, paddingHorizontal: Spacing.lg },
+  err: { fontFamily: Typography.fonts.body, color: Brand.primary, fontSize: 16, textAlign: 'center', marginTop: 100 },
+  closeBtn: { position: 'absolute', top: 56, right: 20, zIndex: 10, width: 36, height: 36, borderRadius: 18, backgroundColor: Surfaces.default, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Surfaces.border },
+  closeTxt: { color: Brand.primary, fontSize: 16, fontWeight: '600' },
+  hero: { alignItems: 'center', paddingVertical: Spacing.xxl, marginHorizontal: -Spacing.lg, paddingHorizontal: Spacing.lg, borderBottomWidth: 1, borderBottomColor: Surfaces.border },
   emoji: { fontSize: 72, marginBottom: Spacing.md },
-  name: { fontSize: 26, fontWeight: '800', color: Typography.primary, textAlign: 'center' },
+  name: { fontFamily: Typography.fonts.h1, fontSize: 26, color: Brand.primary, textAlign: 'center' },
   catTag: { marginTop: Spacing.sm, paddingHorizontal: 14, paddingVertical: 4, borderRadius: Radius.full },
-  catTxt: { fontSize: 13, fontWeight: '700', textTransform: 'capitalize' },
+  catTxt: { fontFamily: Typography.fonts.caption, fontSize: 13, textTransform: 'capitalize' },
   card: { marginTop: Spacing.md },
-  secTitle: { fontSize: 16, fontWeight: '700', color: Typography.primary, marginBottom: 8 },
-  desc: { fontSize: 15, color: Typography.secondary, lineHeight: 22 },
-  factLabel: { fontSize: 14, fontWeight: '700', color: Brand.warm, marginBottom: 6 },
-  fact: { fontSize: 14, color: Typography.secondary, lineHeight: 20, fontStyle: 'italic' },
-  detailRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)' },
+  secTitle: { fontFamily: Typography.fonts.h3, fontSize: 16, color: Brand.primary, marginBottom: 8 },
+  desc: { fontFamily: Typography.fonts.body, fontSize: 15, color: Brand.secondary, lineHeight: 24 },
+  factLabel: { fontFamily: Typography.fonts.h4, fontSize: 14, color: Brand.warning, marginBottom: 6 },
+  fact: { fontFamily: Typography.fonts.body, fontSize: 14, color: Brand.secondary, lineHeight: 22, fontStyle: 'italic' },
+  detailRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Surfaces.border },
   detailIcon: { fontSize: 16, width: 28 },
-  detailLabel: { flex: 1, fontSize: 14, color: Typography.secondary },
-  detailVal: { fontSize: 14, fontWeight: '700', color: Typography.primary },
+  detailLabel: { flex: 1, fontFamily: Typography.fonts.body, fontSize: 14, color: Brand.secondary },
+  detailVal: { fontFamily: Typography.fonts.h4, fontSize: 14, color: Brand.primary },
   actionArea: { marginTop: Spacing.xl, alignItems: 'center' },
   unlockedMsg: { alignItems: 'center' },
   unlockedEmoji: { fontSize: 56 },
-  unlockedTitle: { fontSize: 24, fontWeight: '800', color: Brand.accent, marginTop: Spacing.sm },
-  unlockedSub: { fontSize: 16, color: Brand.warm, marginTop: 4, fontWeight: '600' },
-  exploredCard: { alignItems: 'center', paddingVertical: Spacing.lg },
-  exploredTxt: { fontSize: 16, fontWeight: '700', color: Brand.accent },
-  hint: { fontSize: 12, color: Typography.tertiary, textAlign: 'center', marginTop: Spacing.md, paddingHorizontal: Spacing.lg },
+  unlockedTitle: { fontFamily: Typography.fonts.h2, fontSize: 24, color: Brand.success, marginTop: Spacing.sm },
+  unlockedSub: { fontFamily: Typography.fonts.h4, fontSize: 16, color: Brand.warning, marginTop: 4 },
+  exploredCard: { alignItems: 'center', paddingVertical: Spacing.lg, width: '100%' },
+  exploredTxt: { fontFamily: Typography.fonts.h3, fontSize: 16, color: Brand.success },
+  hint: { fontFamily: Typography.fonts.caption, fontSize: 12, color: Brand.secondary, textAlign: 'center', marginTop: Spacing.md, paddingHorizontal: Spacing.lg },
 });

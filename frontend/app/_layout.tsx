@@ -1,14 +1,28 @@
 /**
- * Root Layout — App entry with dark theme
+ * Root Layout — App entry with Verdana Health design system
  */
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, ThemeProvider } from '@react-navigation/native';
+import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
+
+// Font imports
+import { 
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold 
+} from '@expo-google-fonts/plus-jakarta-sans';
+import { 
+  DMSans_400Regular,
+  DMSans_500Medium 
+} from '@expo-google-fonts/dm-sans';
+import { 
+  FiraCode_400Regular 
+} from '@expo-google-fonts/fira-code';
 
 import { Surfaces, Brand } from '@/constants/Colors';
 
@@ -22,17 +36,17 @@ export const unstable_settings = {
 
 SplashScreen.preventAutoHideAsync();
 
-// Custom dark theme
-const AppDarkTheme = {
-  ...DarkTheme,
+// Custom light theme matching Verdana Health
+const AppLightTheme = {
+  ...DefaultTheme,
   colors: {
-    ...DarkTheme.colors,
+    ...DefaultTheme.colors,
     primary: Brand.primary,
     background: Surfaces.background,
-    card: Surfaces.backgroundElevated,
-    text: '#F9FAFB',
-    border: 'rgba(255,255,255,0.08)',
-    notification: Brand.warm,
+    card: Surfaces.default,
+    text: Brand.primary,
+    border: Surfaces.border,
+    notification: Brand.info,
   },
 };
 
@@ -40,6 +54,12 @@ export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     ...FontAwesome.font,
+    PlusJakartaSans_500Medium,
+    PlusJakartaSans_600SemiBold,
+    PlusJakartaSans_700Bold,
+    DMSans_400Regular,
+    DMSans_500Medium,
+    FiraCode_400Regular,
   });
 
   useEffect(() => {
@@ -57,8 +77,8 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={AppDarkTheme}>
-      <StatusBar style="light" />
+    <ThemeProvider value={AppLightTheme}>
+      <StatusBar style="dark" />
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen

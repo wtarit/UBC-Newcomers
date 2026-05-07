@@ -1,24 +1,18 @@
 /**
- * ExploreMap — Web version
- *
- * Uses an iframe with Leaflet + CartoDB Dark Matter tiles as the real map base.
- * React markers are absolutely positioned on top using the same lat/lng bounds,
- * synced to Leaflet's fixed zoom level (14) with scroll/zoom disabled.
- *
- * Marker pixel positions are calculated using the Mercator projection at zoom 14
- * to match exactly where Leaflet places each coordinate in the iframe.
+ * ExploreMap — Web version (Light Theme)
  */
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   Dimensions, Platform,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 
 import { Brand, Surfaces, Typography, Spacing, Radius, Shadows } from '@/constants/Colors';
 import { EXPLORE_ZONES, CATEGORY_COLORS, type ExploreZone } from '@/constants/Zones';
 import { useExploreStore } from '@/stores/useExploreStore';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -35,7 +29,6 @@ function latToY(lat: number, zoom: number): number {
   return ((1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2) * Math.pow(2, zoom) * 256;
 }
 
-// Convert a lat/lng to pixel offset from the center of the viewport
 function latLngToOffset(
   lat: number, lng: number,
   centerLat: number, centerLng: number,
@@ -62,7 +55,7 @@ function buildMapHTML(centerLat: number, centerLng: number, zoom: number): strin
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; background: #0B0F1A; overflow: hidden; }
+    html, body { width: 100%; height: 100%; background: #F8FAFC; overflow: hidden; }
     #map { width: 100%; height: 100%; }
     .leaflet-control-attribution { display: none; }
   </style>
@@ -81,7 +74,8 @@ function buildMapHTML(centerLat: number, centerLng: number, zoom: number): strin
       attributionControl: false,
     }).setView([${centerLat}, ${centerLng}], ${zoom});
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    // Light theme tiles for Verdana Health
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       subdomains: 'abcd',
       maxZoom: 19,
     }).addTo(map);
@@ -131,8 +125,6 @@ export default function ExploreMapWeb({ insetTop, insetBottom }: ExploreMapProps
   const mapHTML = buildMapHTML(CENTER.lat, CENTER.lng, ZOOM);
   const iframeSrc = `data:text/html;charset=utf-8,${encodeURIComponent(mapHTML)}`;
 
-  const cardVisible = !!selectedZone;
-
   return (
     <View
       style={s.container}
@@ -158,7 +150,7 @@ export default function ExploreMapWeb({ insetTop, insetBottom }: ExploreMapProps
         }
       </View>
 
-      {/* ── ZONE MARKERS overlay (positioned to match Leaflet projection) ── */}
+      {/* ── ZONE MARKERS overlay ── */}
       <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
         {filteredZones.map(zone => {
           const { x, y } = latLngToOffset(
@@ -171,8 +163,6 @@ export default function ExploreMapWeb({ insetTop, insetBottom }: ExploreMapProps
           const catColor = CATEGORY_COLORS[zone.category];
           const isSelected = selectedZone?.id === zone.id;
 
-          // Radius circle size: scale radiusMeters to pixels at zoom 14
-          // At zoom 14, 1 meter ≈ 0.093 pixels (at 49° lat)
           const ringPx = Math.max(zone.radiusMeters * 0.093 * 2, 44);
 
           return (
@@ -189,8 +179,8 @@ export default function ExploreMapWeb({ insetTop, insetBottom }: ExploreMapProps
                 borderRadius: ringPx / 2,
                 left: -(ringPx / 2) + 24,
                 top: -(ringPx / 2) + 24,
-                borderColor: unlocked ? `${Brand.accent}50` : `${catColor}40`,
-                backgroundColor: unlocked ? 'rgba(52,211,153,0.1)' : `${catColor}08`,
+                borderColor: unlocked ? 'rgba(34,197,94,0.4)' : `${catColor}40`,
+                backgroundColor: unlocked ? 'rgba(34,197,94,0.15)' : `${catColor}15`,
               }]} />
 
               {/* Marker bubble */}
@@ -198,19 +188,11 @@ export default function ExploreMapWeb({ insetTop, insetBottom }: ExploreMapProps
                 s.marker,
                 isSelected && s.markerSel,
                 unlocked && s.markerDone,
-                { borderColor: isSelected ? Brand.primary : unlocked ? Brand.accent : `${catColor}90` },
               ]}>
                 <Text style={s.markerE}>{zone.emoji}</Text>
                 {unlocked && (
                   <View style={s.chk}><Text style={s.chkT}>✓</Text></View>
                 )}
-              </View>
-
-              {/* Label pill */}
-              <View style={[s.labelWrap, isSelected && s.labelWrapSel]}>
-                <Text style={[s.labelT, isSelected && s.labelTSel]} numberOfLines={1}>
-                  {zone.name}
-                </Text>
               </View>
             </TouchableOpacity>
           );
@@ -226,7 +208,7 @@ export default function ExploreMapWeb({ insetTop, insetBottom }: ExploreMapProps
           </View>
           <View style={s.divider} />
           <View style={s.si}>
-            <Text style={[s.sv, { color: Brand.warm }]}>{totalPoints}</Text>
+            <Text style={[s.sv, { color: Brand.warning }]}>{totalPoints}</Text>
             <Text style={s.slb}>Points</Text>
           </View>
           <View style={s.divider} />
@@ -238,7 +220,7 @@ export default function ExploreMapWeb({ insetTop, insetBottom }: ExploreMapProps
       </View>
 
       {/* ── CATEGORY FILTERS ── */}
-      <View style={[s.filterC, { top: insetTop + 64 }]}>
+      <View style={[s.filterC, { top: insetTop + 68 }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterR}>
           {CATEGORIES.map(cat => (
             <TouchableOpacity key={cat.key} onPress={() => setActiveCategory(cat.key)} activeOpacity={0.7}>
@@ -253,65 +235,68 @@ export default function ExploreMapWeb({ insetTop, insetBottom }: ExploreMapProps
 
       {/* ── BOTTOM ZONE CARD ── */}
       {selectedZone && (
-        <View style={[s.btmCard, { paddingBottom: Math.max(insetBottom, 12) + 12 }]}>
-          <View style={s.handleBar} />
+        <View style={[s.btmWrap, { paddingBottom: Math.max(insetBottom, 12) + 12 }]}>
+          <Card variant="elevated" style={s.btmCard} noPadding>
+            <View style={s.handleBar} />
+            <View style={{ padding: Spacing.lg }}>
+              <View style={s.cardH}>
+                <View style={[s.cardIcon, { backgroundColor: `${CATEGORY_COLORS[selectedZone.category]}15` }]}>
+                  <Text style={{ fontSize: 26 }}>{selectedZone.emoji}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={s.cardNR}>
+                    <Text style={s.cardN}>{selectedZone.name}</Text>
+                    {isZoneUnlocked(selectedZone.id) && (
+                      <View style={s.expB}><Text style={s.expBT}>✓ Explored</Text></View>
+                    )}
+                  </View>
+                  <Text style={s.cardDesc} numberOfLines={2}>{selectedZone.description}</Text>
+                </View>
+              </View>
 
-          <View style={s.cardH}>
-            <View style={[s.cardIcon, { backgroundColor: `${CATEGORY_COLORS[selectedZone.category]}20` }]}>
-              <Text style={{ fontSize: 26 }}>{selectedZone.emoji}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <View style={s.cardNR}>
-                <Text style={s.cardN}>{selectedZone.name}</Text>
-                {isZoneUnlocked(selectedZone.id) && (
-                  <View style={s.expB}><Text style={s.expBT}>✓ Explored</Text></View>
+              <View style={s.cardMeta}>
+                <View style={[s.catTag, { backgroundColor: `${CATEGORY_COLORS[selectedZone.category]}15` }]}>
+                  <Text style={[s.catTT, { color: CATEGORY_COLORS[selectedZone.category] }]}>
+                    {selectedZone.category}
+                  </Text>
+                </View>
+                <Text style={s.radT}>📍 {selectedZone.radiusMeters}m radius</Text>
+                <View style={s.ptBadge}><Text style={s.ptText}>+{selectedZone.points} pts</Text></View>
+              </View>
+
+              <View style={s.acts}>
+                {justUnlocked === selectedZone.id ? (
+                  <View style={s.unlkMsg}>
+                    <Text style={{ fontSize: 24 }}>🎉</Text>
+                    <Text style={s.unlkMT}>Zone Unlocked! +{selectedZone.points} pts</Text>
+                  </View>
+                ) : isZoneUnlocked(selectedZone.id) ? (
+                  <Button
+                    title="View Details"
+                    variant="secondary"
+                    onPress={() => router.push({ pathname: '/zone-detail', params: { zoneId: selectedZone.id } })}
+                  />
+                ) : (
+                  <View style={s.actRow}>
+                    <Button
+                      title="Unlock Zone"
+                      variant="primary"
+                      icon="🔓"
+                      style={{ flex: 1 }}
+                      onPress={handleUnlock}
+                    />
+                    <TouchableOpacity
+                      style={s.infoBtn}
+                      onPress={() => router.push({ pathname: '/zone-detail', params: { zoneId: selectedZone.id } })}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={{ fontSize: 20 }}>ℹ️</Text>
+                    </TouchableOpacity>
+                  </View>
                 )}
               </View>
-              <Text style={s.cardDesc} numberOfLines={2}>{selectedZone.description}</Text>
             </View>
-          </View>
-
-          <View style={s.cardMeta}>
-            <View style={[s.catTag, { backgroundColor: `${CATEGORY_COLORS[selectedZone.category]}20` }]}>
-              <Text style={[s.catTT, { color: CATEGORY_COLORS[selectedZone.category] }]}>
-                {selectedZone.category}
-              </Text>
-            </View>
-            <Text style={s.radT}>📍 {selectedZone.radiusMeters}m radius</Text>
-            <View style={s.ptBadge}><Text style={s.ptText}>+{selectedZone.points} pts</Text></View>
-          </View>
-
-          <View style={s.acts}>
-            {justUnlocked === selectedZone.id ? (
-              <View style={s.unlkMsg}>
-                <Text style={{ fontSize: 24 }}>🎉</Text>
-                <Text style={s.unlkMT}>Zone Unlocked! +{selectedZone.points} pts</Text>
-              </View>
-            ) : isZoneUnlocked(selectedZone.id) ? (
-              <TouchableOpacity
-                style={s.detBtn}
-                onPress={() => router.push({ pathname: '/zone-detail', params: { zoneId: selectedZone.id } })}
-                activeOpacity={0.8}
-              >
-                <Text style={s.detBtnT}>View Details</Text>
-              </TouchableOpacity>
-            ) : (
-              <View style={s.actRow}>
-                <TouchableOpacity style={s.ulkBtn} onPress={handleUnlock} activeOpacity={0.8}>
-                  <LinearGradient colors={[Brand.accent, Brand.accentDark]} style={s.ulkG}>
-                    <Text style={s.ulkBT}>🔓 Unlock Zone</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={s.infoBtn}
-                  onPress={() => router.push({ pathname: '/zone-detail', params: { zoneId: selectedZone.id } })}
-                  activeOpacity={0.8}
-                >
-                  <Text style={{ fontSize: 20 }}>ℹ️</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
+          </Card>
         </View>
       )}
 
@@ -328,90 +313,67 @@ export default function ExploreMapWeb({ insetTop, insetBottom }: ExploreMapProps
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0B0F1A' },
+  container: { flex: 1, backgroundColor: Surfaces.background },
 
-  // Markers
   markerWrap: { position: 'absolute', alignItems: 'center', zIndex: 5 },
   radiusRing: { position: 'absolute', borderWidth: 1.5 },
   marker: {
-    width: 48, height: 48, borderRadius: 24,
-    backgroundColor: 'rgba(17,24,39,0.9)',
+    width: 44, height: 44, borderRadius: Radius.full,
+    backgroundColor: Surfaces.default,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.5, shadowRadius: 6, elevation: 8,
+    borderWidth: 1, borderColor: Surfaces.border,
+    ...Shadows.sm,
   },
-  markerSel: { backgroundColor: 'rgba(79,142,247,0.3)', transform: [{ scale: 1.2 }] },
-  markerDone: { backgroundColor: 'rgba(52,211,153,0.25)' },
-  markerE: { fontSize: 24 },
-  chk: { position: 'absolute', top: -4, right: -4, width: 16, height: 16, borderRadius: 8, backgroundColor: Brand.accent, alignItems: 'center', justifyContent: 'center' },
+  markerSel: { borderColor: Brand.primary, borderWidth: 2, transform: [{ scale: 1.15 }], ...Shadows.md },
+  markerDone: { borderColor: Brand.success, backgroundColor: '#F0FDF4' },
+  markerE: { fontSize: 22 },
+  chk: { position: 'absolute', top: -4, right: -4, width: 16, height: 16, borderRadius: 8, backgroundColor: Brand.success, alignItems: 'center', justifyContent: 'center' },
   chkT: { fontSize: 9, color: '#fff', fontWeight: '800' },
-  labelWrap: { marginTop: 4, backgroundColor: 'rgba(11,15,26,0.85)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.sm, maxWidth: 130, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-  labelWrapSel: { backgroundColor: `${Brand.primary}35`, borderColor: `${Brand.primary}50` },
-  labelT: { fontSize: 10, color: Typography.secondary, fontWeight: '600', textAlign: 'center' },
-  labelTSel: { color: Brand.primaryLight },
 
-  // Top stats bar
   topBar: { position: 'absolute', left: 16, right: 16, zIndex: 10 },
   stats: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(11,15,26,0.92)',
+    flexDirection: 'row', backgroundColor: Surfaces.default,
     borderRadius: Radius.lg, paddingVertical: 10, paddingHorizontal: 16,
-    alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 8,
+    alignItems: 'center', borderWidth: 1, borderColor: Surfaces.border,
+    ...Shadows.DEFAULT,
   },
   si: { flex: 1, alignItems: 'center' },
-  sv: { fontSize: 18, fontWeight: '800', color: Brand.primary },
-  slb: { fontSize: 10, color: Typography.tertiary, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 1 },
-  divider: { width: 1, height: 28, backgroundColor: 'rgba(255,255,255,0.08)' },
+  sv: { fontFamily: Typography.fonts.h3, fontSize: 18, color: Brand.primary },
+  slb: { fontFamily: Typography.fonts.caption, fontSize: 10, color: Brand.secondary, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 1 },
+  divider: { width: 1, height: 28, backgroundColor: Surfaces.border },
 
-  // Filters
   filterC: { position: 'absolute', left: 0, right: 0, zIndex: 10 },
   filterR: { paddingHorizontal: 16, gap: 8 },
   pill: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 12, paddingVertical: 7,
-    borderRadius: Radius.full,
-    backgroundColor: 'rgba(11,15,26,0.88)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', gap: 5,
+    paddingHorizontal: 12, paddingVertical: 6,
+    borderRadius: Radius.full, backgroundColor: Surfaces.default,
+    borderWidth: 1, borderColor: Surfaces.border, gap: 5, ...Shadows.sm,
   },
-  pillA: { backgroundColor: `${Brand.primary}35`, borderColor: `${Brand.primary}70` },
+  pillA: { backgroundColor: Brand.primary, borderColor: Brand.primary },
   pillE: { fontSize: 13 },
-  pillL: { fontSize: 12, fontWeight: '600', color: Typography.secondary },
-  pillLA: { color: Brand.primaryLight },
+  pillL: { fontFamily: Typography.fonts.bodySm, fontSize: 13, color: Brand.primary },
+  pillLA: { color: Surfaces.default },
 
-  // Bottom card
-  btmCard: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: 'rgba(11,15,26,0.97)',
-    borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl,
-    paddingHorizontal: 20, paddingTop: 12,
-    borderTopWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
-    shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.5, shadowRadius: 20, elevation: 20,
-    zIndex: 20,
-  },
-  handleBar: { width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.15)', alignSelf: 'center', marginBottom: 14 },
+  btmWrap: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 16 },
+  btmCard: { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
+  handleBar: { width: 36, height: 4, borderRadius: 2, backgroundColor: Surfaces.border, alignSelf: 'center', marginTop: 12, marginBottom: 8 },
   cardH: { flexDirection: 'row', gap: 14 },
   cardIcon: { width: 52, height: 52, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
   cardNR: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  cardN: { fontSize: 17, fontWeight: '700', color: Typography.primary },
-  expB: { backgroundColor: `${Brand.accent}20`, paddingHorizontal: 8, paddingVertical: 2, borderRadius: Radius.full },
-  expBT: { fontSize: 11, fontWeight: '700', color: Brand.accent },
-  cardDesc: { fontSize: 13, color: Typography.secondary, marginTop: 4, lineHeight: 18 },
+  cardN: { fontFamily: Typography.fonts.h3, fontSize: 18, color: Brand.primary },
+  expB: { backgroundColor: `${Brand.success}15`, paddingHorizontal: 8, paddingVertical: 2, borderRadius: Radius.sm },
+  expBT: { fontFamily: Typography.fonts.caption, fontSize: 11, color: Brand.success },
+  cardDesc: { fontFamily: Typography.fonts.bodySm, fontSize: 14, color: Brand.secondary, marginTop: 4, lineHeight: 20 },
   cardMeta: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 },
-  catTag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.full },
-  catTT: { fontSize: 11, fontWeight: '700', textTransform: 'capitalize' },
-  radT: { fontSize: 12, color: Typography.tertiary },
-  ptBadge: { backgroundColor: `${Brand.warm}20`, paddingHorizontal: 10, paddingVertical: 3, borderRadius: Radius.full, marginLeft: 'auto' },
-  ptText: { fontSize: 12, fontWeight: '800', color: Brand.warm },
-  acts: { marginTop: 14 },
+  catTag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.sm },
+  catTT: { fontFamily: Typography.fonts.caption, fontSize: 11, textTransform: 'capitalize' },
+  radT: { fontFamily: Typography.fonts.bodySm, fontSize: 12, color: Brand.secondary },
+  ptBadge: { backgroundColor: `${Brand.warning}15`, paddingHorizontal: 10, paddingVertical: 3, borderRadius: Radius.sm, marginLeft: 'auto' },
+  ptText: { fontFamily: Typography.fonts.caption, fontSize: 12, color: Brand.warning },
+  acts: { marginTop: 16 },
   actRow: { flexDirection: 'row', gap: 10 },
-  ulkBtn: { flex: 1, borderRadius: Radius.full, overflow: 'hidden' },
-  ulkG: { paddingVertical: 13, alignItems: 'center', borderRadius: Radius.full },
-  ulkBT: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  infoBtn: { width: 48, height: 48, borderRadius: 24, backgroundColor: Surfaces.glass, borderWidth: 1, borderColor: Surfaces.glassBorder, alignItems: 'center', justifyContent: 'center' },
-  detBtn: { backgroundColor: `${Brand.primary}20`, borderWidth: 1, borderColor: `${Brand.primary}50`, paddingVertical: 13, borderRadius: Radius.full, alignItems: 'center' },
-  detBtnT: { color: Brand.primary, fontSize: 15, fontWeight: '700' },
+  infoBtn: { width: 42, height: 42, borderRadius: Radius.DEFAULT, backgroundColor: Surfaces.default, borderWidth: 1, borderColor: Surfaces.border, alignItems: 'center', justifyContent: 'center' },
   unlkMsg: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 10 },
-  unlkMT: { fontSize: 16, fontWeight: '800', color: Brand.accent },
+  unlkMT: { fontFamily: Typography.fonts.h3, fontSize: 16, color: Brand.success },
 });
