@@ -15,9 +15,12 @@ import { useExploreStore } from '@/stores/useExploreStore';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 
-type CategoryFilter = ExploreZone['category'] | 'all';
+import { type EventResponse } from '@/services/api';
+
+type CategoryFilter = ExploreZone['category'] | 'all' | 'events';
 const CATEGORIES: { key: CategoryFilter; label: string; icon: keyof typeof Feather.glyphMap }[] = [
   { key: 'all', label: 'All', icon: 'map' },
+  { key: 'events', label: 'Events', icon: 'calendar' },
   { key: 'nature', label: 'Nature', icon: 'feather' },
   { key: 'academic', label: 'Academic', icon: 'book-open' },
   { key: 'social', label: 'Social', icon: 'users' },
@@ -34,18 +37,42 @@ export default function ExploreMapNative({ insetTop, insetBottom }: ExploreMapPr
   const mapRef = useRef<MapView>(null);
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>('all');
   const [selectedZone, setSelectedZone] = useState<ExploreZone | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<EventResponse | null>(null);
   const [justUnlocked, setJustUnlocked] = useState<string | null>(null);
-  const { zones, isZoneUnlocked, getProgress, totalPoints, unlockZone } = useExploreStore();
+  const { zones, events, fetchEvents, isZoneUnlocked, getProgress, totalPoints, unlockZone } = useExploreStore();
   const progress = getProgress();
 
-  const filteredZones = activeCategory === 'all' ? zones : zones.filter(z => z.category === activeCategory);
+  React.useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  const filteredZones = (activeCategory === 'all')
+    ? zones
+    : (activeCategory === 'events' ? [] : zones.filter(z => z.category === activeCategory));
+  
+  const filteredEvents = (activeCategory === 'all' || activeCategory === 'events')
+    ? events
+    : [];
 
   const handleMarkerPress = useCallback((zone: ExploreZone) => {
     setSelectedZone(zone);
+    setSelectedEvent(null);
     setJustUnlocked(null);
     mapRef.current?.animateToRegion({
       latitude: zone.latitude - 0.003,
       longitude: zone.longitude,
+      latitudeDelta: 0.012, longitudeDelta: 0.012,
+    }, 400);
+  }, []);
+
+  const handleEventMarkerPress = useCallback((event: EventResponse) => {
+    if (!event.latitude || !event.longitude) return;
+    setSelectedEvent(event);
+    setSelectedZone(null);
+    setJustUnlocked(null);
+    mapRef.current?.animateToRegion({
+      latitude: event.latitude - 0.003,
+      longitude: event.longitude,
       latitudeDelta: 0.012, longitudeDelta: 0.012,
     }, 400);
   }, []);
@@ -65,7 +92,7 @@ export default function ExploreMapNative({ insetTop, insetBottom }: ExploreMapPr
         showsUserLocation
         showsMyLocationButton={false}
         showsCompass={false}
-        onPress={() => setSelectedZone(null)}
+        onPress={() => { setSelectedZone(null); setSelectedEvent(null); }}
       >
         {filteredZones.map(zone => {
           const unlocked = isZoneUnlocked(zone.id);
@@ -98,6 +125,30 @@ export default function ExploreMapNative({ insetTop, insetBottom }: ExploreMapPr
                 </View>
               </Marker>
             </React.Fragment>
+          );
+        })}
+
+        {filteredEvents.map(event => {
+          if (!event.latitude || !event.longitude) return null;
+          const isSelected = selectedEvent?.id === event.id;
+          return (
+            <Marker
+              key={event.id}
+              coordinate={{ latitude: event.latitude, longitude: event.longitude }}
+              onPress={() => handleEventMarkerPress(event)}
+            >
+              <View style={[
+                s.marker,
+                { borderColor: Brand.accent, backgroundColor: '#FFF9F0' },
+                isSelected && s.markerSel,
+              ]}>
+                <Feather 
+                  name="calendar" 
+                  size={20} 
+                  color={isSelected ? Brand.accent : Brand.primary} 
+                />
+              </View>
+            </Marker>
           );
         })}
       </MapView>
@@ -141,11 +192,11 @@ export default function ExploreMapNative({ insetTop, insetBottom }: ExploreMapPr
       </View>
 
       {/* Recenter */}
-      <TouchableOpacity style={[s.recenter, { bottom: selectedZone ? 260 : 100 }]} onPress={() => mapRef.current?.animateToRegion(UBC_CENTER, 500)} activeOpacity={0.8}>
+      <TouchableOpacity style={[s.recenter, { bottom: (selectedZone || selectedEvent) ? 260 : 100 }]} onPress={() => mapRef.current?.animateToRegion(UBC_CENTER, 500)} activeOpacity={0.8}>
         <Feather name="navigation" size={20} color={Brand.primary} />
       </TouchableOpacity>
 
-      {/* Bottom card */}
+      {/* Bottom card for Zone */}
       {selectedZone && (
         <View style={[s.btmWrap, { paddingBottom: insetBottom + 12 }]}>
           <Card style={s.btmCard} noPadding>
@@ -202,6 +253,45 @@ export default function ExploreMapNative({ insetTop, insetBottom }: ExploreMapPr
                     </TouchableOpacity>
                   </View>
                 )}
+              </View>
+            </View>
+          </Card>
+        </View>
+      )}
+
+      {/* Bottom card for Event */}
+      {selectedEvent && (
+        <View style={[s.btmWrap, { paddingBottom: insetBottom + 12 }]}>
+          <Card style={s.btmCard} noPadding>
+            <View style={s.handle} />
+            <View style={{ padding: Spacing.lg }}>
+              <View style={s.cardH}>
+                <View style={[s.cardE, { backgroundColor: '#FFF9F0' }]}>
+                  <Feather name="calendar" size={24} color={Brand.accent} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={s.cardNR}>
+                    <Text style={s.cardN}>{selectedEvent.title}</Text>
+                  </View>
+                  <Text style={s.cardD} numberOfLines={2}>{selectedEvent.description}</Text>
+                </View>
+              </View>
+              <View style={s.cardM}>
+                <View style={[s.catTag, { backgroundColor: `${Brand.accent}15` }]}>
+                  <Text style={[s.catTT, { color: Brand.accent }]}>{selectedEvent.club_name || 'Event'}</Text>
+                </View>
+                {selectedEvent.event_date && (
+                  <Text style={s.radT}>
+                    <Feather name="clock" size={10}/> {new Date(selectedEvent.event_date).toLocaleDateString()}
+                  </Text>
+                )}
+              </View>
+              <View style={s.acts}>
+                <Button 
+                  title="View Event Details" 
+                  variant="primary" 
+                  onPress={() => router.push({ pathname: '/event-detail', params: { eventId: selectedEvent.id } })} 
+                />
               </View>
             </View>
           </Card>

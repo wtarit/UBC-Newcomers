@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
 from app.routers import auth, users, events, connections, matching, landmarks, meetups
-from app.seed import seed_landmarks
+from app.seed import seed_landmarks, seed_events
 
 
 @asynccontextmanager
@@ -15,6 +15,7 @@ async def lifespan(app: FastAPI):
     from app.database import async_session
     async with async_session() as db:
         await seed_landmarks(db)
+        await seed_events(db)
     yield
     await engine.dispose()
 
