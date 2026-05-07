@@ -21,7 +21,8 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     clearError();
-    const success = await login(email.trim(), password);
+    const normalizedEmail = email.trim();
+    const success = await login(normalizedEmail, password);
     if (success) {
       const user = useAuthStore.getState().user;
       if (user && !user.onboarding_completed) {
@@ -29,6 +30,15 @@ export default function LoginScreen() {
       } else {
         router.replace('/(tabs)');
       }
+      return;
+    }
+
+    const authError = (useAuthStore.getState().error || '').toLowerCase();
+    if (
+      normalizedEmail.includes('@') &&
+      (authError.includes('not confirmed') || authError.includes('not verify'))
+    ) {
+      router.replace({ pathname: '/(auth)/verify', params: { email: normalizedEmail } });
     }
   };
 

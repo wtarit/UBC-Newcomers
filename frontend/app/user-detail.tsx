@@ -19,6 +19,7 @@ export default function UserDetailScreen() {
   const insets = useSafeAreaInsets();
   const { nearbyUsers, matchedUsers, sendConnectionRequest, getIntroForUser } = useNearbyStore();
   const [sending, setSending] = useState(false);
+  const [connectError, setConnectError] = useState<string | null>(null);
 
   const user = [...nearbyUsers, ...matchedUsers].find(u => u.id === userId);
   if (!user) return <View style={s.container}><Text style={s.err}>User not found</Text></View>;
@@ -27,7 +28,9 @@ export default function UserDetailScreen() {
 
   const handleConnect = async () => {
     setSending(true);
-    await sendConnectionRequest(user.id);
+    setConnectError(null);
+    const ok = await sendConnectionRequest(user.id);
+    if (!ok) setConnectError('Unable to send request. It may already exist.');
     setSending(false);
   };
 
@@ -94,12 +97,15 @@ export default function UserDetailScreen() {
               </View>
             </Card>
           ) : (
-            <Button
-              title={sending ? 'Sending...' : 'Connect'}
-              variant="primary"
-              size="lg"
-              onPress={handleConnect}
-            />
+            <>
+              <Button
+                title={sending ? 'Sending...' : 'Connect'}
+                variant="primary"
+                size="lg"
+                onPress={handleConnect}
+              />
+              {connectError ? <Text style={s.error}>{connectError}</Text> : null}
+            </>
           )}
         </View>
 
@@ -131,4 +137,5 @@ const s = StyleSheet.create({
   section: { marginTop: Spacing.xl },
   sentRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   sentLabel: { fontFamily: Typography.fonts.h4, fontSize: 14, color: Brand.success },
+  error: { fontFamily: Typography.fonts.bodySm, fontSize: 13, color: Brand.error, marginTop: 8 },
 });
