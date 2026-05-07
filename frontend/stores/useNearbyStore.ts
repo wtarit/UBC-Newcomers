@@ -16,6 +16,7 @@ export interface NearbyUser {
   profilePictureUrl: string | null;
   isAvailableToMeet: boolean;
   connectionsCount: number;
+  matchReason?: string;
 }
 
 interface Introduction {
@@ -74,6 +75,7 @@ function matchedUserToNearbyUser(item: MatchedUserResponse): NearbyUser {
     profilePictureUrl: item.user.profile_picture_url,
     isAvailableToMeet: item.user.is_available_to_meet,
     connectionsCount: item.user.connections_count,
+    matchReason: item.match_reason,
   };
 }
 

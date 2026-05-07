@@ -49,7 +49,10 @@ function UserCard({ user, onPress }: { user: NearbyUser; onPress: () => void }) 
           </View>
         </View>
         <View style={cc.foot}>
-          <Text style={cc.meta}>{user.origin || 'Nearby'}</Text>
+          <View style={{ flex: 1, paddingRight: 8 }}>
+            <Text style={cc.meta}>{user.origin || 'Nearby'}</Text>
+            {user.matchReason ? <Text style={cc.reason}>{user.matchReason}</Text> : null}
+          </View>
           <MatchBadge score={user.matchScore} size="sm" />
         </View>
       </Card>
@@ -71,6 +74,7 @@ const cc = StyleSheet.create({
   tagT: { fontFamily: Typography.fonts.caption, fontSize: 11, color: Brand.primary, textTransform: 'uppercase', letterSpacing: 0.5 },
   foot: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Spacing.md, paddingTop: Spacing.sm, borderTopWidth: 1, borderTopColor: Surfaces.border },
   meta: { fontFamily: Typography.fonts.caption, fontSize: 12, color: Brand.secondary },
+  reason: { fontFamily: Typography.fonts.bodySm, fontSize: 12, color: Brand.primary, marginTop: 2 },
 });
 
 export default function NearbyScreen() {
