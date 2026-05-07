@@ -1,19 +1,23 @@
 /**
  * ExploreMap — Web version (Flat Theme)
  */
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  Dimensions, Platform,
-} from 'react-native';
-import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import React, { useCallback, useState } from 'react';
+import {
+    Dimensions, Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
-import { Brand, Surfaces, Typography, Spacing, Radius } from '@/constants/Colors';
-import { EXPLORE_ZONES, CATEGORY_COLORS, type ExploreZone } from '@/constants/Zones';
-import { useExploreStore } from '@/stores/useExploreStore';
-import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { Brand, Radius, Spacing, Surfaces, Typography } from '@/constants/Colors';
+import { CATEGORY_COLORS, type ExploreZone } from '@/constants/Zones';
+import { useExploreStore } from '@/stores/useExploreStore';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -158,7 +162,7 @@ export default function ExploreMapWeb({ insetTop, insetBottom }: ExploreMapProps
           const catColor = CATEGORY_COLORS[zone.category];
           const isSelected = selectedZone?.id === zone.id;
 
-          const ringPx = Math.max(zone.radiusMeters * 0.093 * 2, 44);
+          const ringPx = 50 // Math.max(zone.radiusMeters * 0.093 * 2, 44);
 
           return (
             <TouchableOpacity
@@ -171,8 +175,8 @@ export default function ExploreMapWeb({ insetTop, insetBottom }: ExploreMapProps
                 width: ringPx,
                 height: ringPx,
                 borderRadius: ringPx / 2,
-                left: -(ringPx / 2) + 24,
-                top: -(ringPx / 2) + 24,
+                left: 22 - ringPx / 2,
+                top: 22 - ringPx / 2,
                 borderColor: unlocked ? Brand.success : `${catColor}40`,
                 backgroundColor: unlocked ? 'rgba(52,199,89,0.1)' : `${catColor}15`,
               }]} />
@@ -317,7 +321,7 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: Surfaces.background },
 
   markerWrap: { position: 'absolute', alignItems: 'center', zIndex: 5 },
-  radiusRing: { position: 'absolute', borderWidth: 1.5 },
+  radiusRing: { position: 'absolute', borderWidth: 2.5 },
   marker: {
     width: 44, height: 44, borderRadius: Radius.full,
     backgroundColor: Surfaces.background,
