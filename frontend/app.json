@@ -36,7 +36,8 @@
         {
           "locationWhenInUsePermission": "UBC Newcomers uses your location to find people near you on campus."
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true

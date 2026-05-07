@@ -68,6 +68,36 @@ class TestMatchUsers:
         data = resp.json()
         assert data["matches"] == []
 
+    async def test_match_users_fallback_when_bedrock_fails(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        test_user: User,
+    ):
+        similar_user = User(
+            id=uuid.uuid4(),
+            cognito_sub="fallback-sub-333",
+            email="fallback@student.ubc.ca",
+            full_name="Fallback User",
+            major=test_user.major,
+            faculty=test_user.faculty,
+            year_standing=test_user.year_standing,
+            interests=test_user.interests,
+            onboarding_completed=True,
+        )
+        db_session.add(similar_user)
+        await db_session.flush()
+
+        with patch("app.services.bedrock._client") as mock_br:
+            br_client = MagicMock()
+            mock_br.return_value = br_client
+            br_client.invoke_model.side_effect = Exception("Bedrock unavailable")
+            resp = await client.get("/matching/users", params={"limit": 10})
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["matches"]) >= 1
+
 
 class TestMatchEvents:
     async def test_match_events_returns_matches(

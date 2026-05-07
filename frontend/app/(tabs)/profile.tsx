@@ -2,7 +2,7 @@
  * Profile Tab — User profile & exploration stats (UBC-Navigate)
  */
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Brand, Surfaces, Typography, Spacing, Radius } from '@/constants/Colors';
 import { useExploreStore } from '@/stores/useExploreStore';
@@ -35,7 +35,7 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { totalPoints, getProgress, zones, isZoneUnlocked } = useExploreStore();
   const { introductions } = useNearbyStore();
-  const { user, fetchUser, accessToken } = useAuthStore();
+  const { user, fetchUser, accessToken, logout } = useAuthStore();
   const progress = getProgress();
 
   useEffect(() => {
@@ -126,6 +126,12 @@ export default function ProfileScreen() {
           </Card>
         </View>
 
+        {/* Logout */}
+        <TouchableOpacity style={s.logoutBtn} onPress={logout} activeOpacity={0.7}>
+          <Feather name="log-out" size={18} color="#DC3545" />
+          <Text style={s.logoutText}>Log Out</Text>
+        </TouchableOpacity>
+
         <View style={{ height: 48 }} />
       </ScrollView>
     </View>
@@ -156,4 +162,6 @@ const s = StyleSheet.create({
   catCount: { fontFamily: Typography.fonts.caption, fontSize: 12, color: Brand.secondary, width: 32, textAlign: 'right' },
   barBg: { height: 4, backgroundColor: Surfaces.default, borderRadius: Radius.full, overflow: 'hidden' },
   barFill: { height: 4, borderRadius: Radius.full },
+  logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: Spacing.xl, paddingVertical: 14, borderRadius: Radius.md, borderWidth: 1, borderColor: '#DC3545' },
+  logoutText: { fontFamily: Typography.fonts.h4, fontSize: 15, color: '#DC3545' },
 });

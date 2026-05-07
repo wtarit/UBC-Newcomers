@@ -1,5 +1,30 @@
 import { create } from 'zustand';
+import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import { api, type UserResponse } from '@/services/api';
+
+const TOKEN_KEYS = {
+  access: 'auth_access_token',
+  refresh: 'auth_refresh_token',
+  id: 'auth_id_token',
+} as const;
+
+async function saveToken(key: string, value: string | null) {
+  if (Platform.OS === 'web') {
+    if (value) localStorage.setItem(key, value);
+    else localStorage.removeItem(key);
+  } else {
+    if (value) await SecureStore.setItemAsync(key, value);
+    else await SecureStore.deleteItemAsync(key);
+  }
+}
+
+async function getToken(key: string): Promise<string | null> {
+  if (Platform.OS === 'web') {
+    return localStorage.getItem(key);
+  }
+  return SecureStore.getItemAsync(key);
+}
 
 interface AuthState {
   accessToken: string | null;
@@ -7,15 +32,17 @@ interface AuthState {
   idToken: string | null;
   user: UserResponse | null;
   isLoading: boolean;
+  isRestoring: boolean;
   error: string | null;
 
   login: (email: string, password: string) => Promise<boolean>;
   signup: (email: string, password: string, fullName: string) => Promise<{ success: boolean; message: string }>;
   verifyEmail: (email: string, code: string) => Promise<boolean>;
   refresh: () => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
   fetchUser: () => Promise<void>;
   clearError: () => void;
+  restoreSession: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -24,18 +51,53 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   idToken: null,
   user: null,
   isLoading: false,
+  isRestoring: true,
   error: null,
+
+  restoreSession: async () => {
+    set({ isRestoring: true });
+    try {
+      const [accessToken, refreshToken, idToken] = await Promise.all([
+        getToken(TOKEN_KEYS.access),
+        getToken(TOKEN_KEYS.refresh),
+        getToken(TOKEN_KEYS.id),
+      ]);
+
+      if (!refreshToken) {
+        set({ isRestoring: false });
+        return;
+      }
+
+      set({ accessToken, refreshToken, idToken });
+
+      const refreshed = await get().refresh();
+      if (refreshed) {
+        await get().fetchUser();
+      } else {
+        await get().logout();
+      }
+    } catch {
+      set({ accessToken: null, refreshToken: null, idToken: null });
+    } finally {
+      set({ isRestoring: false });
+    }
+  },
 
   login: async (email, password) => {
     set({ isLoading: true, error: null });
     try {
       const tokens = await api.login(email, password);
-      set({
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
-        idToken: tokens.id_token,
-        isLoading: false,
-      });
+      const accessToken = tokens.access_token;
+      const refreshToken = tokens.refresh_token;
+      const idToken = tokens.id_token;
+
+      await Promise.all([
+        saveToken(TOKEN_KEYS.access, accessToken),
+        saveToken(TOKEN_KEYS.refresh, refreshToken),
+        saveToken(TOKEN_KEYS.id, idToken),
+      ]);
+
+      set({ accessToken, refreshToken, idToken, isLoading: false });
       await get().fetchUser();
       return true;
     } catch (e: any) {
@@ -73,17 +135,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!refreshToken) return false;
     try {
       const tokens = await api.refreshToken(refreshToken);
-      set({
-        accessToken: tokens.access_token,
-        idToken: tokens.id_token,
-      });
+      const accessToken = tokens.access_token;
+      const idToken = tokens.id_token;
+
+      await Promise.all([
+        saveToken(TOKEN_KEYS.access, accessToken),
+        saveToken(TOKEN_KEYS.id, idToken),
+      ]);
+
+      set({ accessToken, idToken });
       return true;
     } catch {
       return false;
     }
   },
 
-  logout: () => {
+  logout: async () => {
+    await Promise.all([
+      saveToken(TOKEN_KEYS.access, null),
+      saveToken(TOKEN_KEYS.refresh, null),
+      saveToken(TOKEN_KEYS.id, null),
+    ]);
     set({
       accessToken: null,
       refreshToken: null,

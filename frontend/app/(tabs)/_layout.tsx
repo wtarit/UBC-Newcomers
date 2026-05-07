@@ -59,9 +59,12 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="two"
+        name="connections"
         options={{
-          href: null,
+          title: 'Connections',
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name="comments" color={color} focused={focused} />
+          ),
         }}
       />
     </Tabs>

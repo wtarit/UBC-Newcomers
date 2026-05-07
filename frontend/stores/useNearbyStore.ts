@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import * as Location from 'expo-location';
-import { api, type NearbyUserResponse, type MatchedUserResponse } from '@/services/api';
+import { api, type NearbyUserResponse, type MatchedUserResponse, type ConnectionResponse } from '@/services/api';
 import { useAuthStore } from '@/stores/useAuthStore';
 
 export interface NearbyUser {
@@ -16,6 +16,19 @@ export interface NearbyUser {
   profilePictureUrl: string | null;
   isAvailableToMeet: boolean;
   connectionsCount: number;
+  matchReason?: string;
+}
+
+export interface PendingConnection {
+  id: string;
+  requester: {
+    id: string;
+    fullName: string;
+    major: string;
+    origin: string;
+    interests: string[];
+  };
+  createdAt: string;
 }
 
 interface Introduction {
@@ -30,17 +43,25 @@ interface NearbyState {
   matchedUsers: NearbyUser[];
   selectedUser: NearbyUser | null;
   introductions: Introduction[];
+  pendingConnections: PendingConnection[];
   isScanning: boolean;
   isLoading: boolean;
   locationPermissionDenied: boolean;
   error: string | null;
+  pollingInterval: ReturnType<typeof setInterval> | null;
 
   selectUser: (user: NearbyUser | null) => void;
   updateMyLocation: () => Promise<boolean>;
   fetchNearbyUsers: (radiusKm?: number) => Promise<void>;
   fetchMatchedUsers: (limit?: number) => Promise<void>;
+  fetchPendingConnections: () => Promise<void>;
   sendConnectionRequest: (userId: string) => Promise<boolean>;
+  acceptConnectionRequest: (connectionId: string) => Promise<boolean>;
+  declineConnectionRequest: (connectionId: string) => Promise<boolean>;
   getIntroForUser: (userId: string) => Introduction | undefined;
+  startPolling: () => void;
+  stopPolling: () => void;
+  refreshAll: () => Promise<void>;
 }
 
 function apiUserToNearbyUser(item: NearbyUserResponse): NearbyUser {
@@ -74,18 +95,37 @@ function matchedUserToNearbyUser(item: MatchedUserResponse): NearbyUser {
     profilePictureUrl: item.user.profile_picture_url,
     isAvailableToMeet: item.user.is_available_to_meet,
     connectionsCount: item.user.connections_count,
+    matchReason: item.match_reason,
   };
 }
+
+function connectionToPending(conn: ConnectionResponse): PendingConnection {
+  return {
+    id: conn.id,
+    requester: {
+      id: conn.requester.id,
+      fullName: conn.requester.full_name,
+      major: conn.requester.major || 'Undeclared',
+      origin: conn.requester.origin || '',
+      interests: conn.requester.interests || [],
+    },
+    createdAt: conn.created_at,
+  };
+}
+
+const POLL_INTERVAL_MS = 15000;
 
 export const useNearbyStore = create<NearbyState>((set, get) => ({
   nearbyUsers: [],
   matchedUsers: [],
   selectedUser: null,
   introductions: [],
+  pendingConnections: [],
   isScanning: false,
   isLoading: false,
   locationPermissionDenied: false,
   error: null,
+  pollingInterval: null,
 
   selectUser: (user) => set({ selectedUser: user }),
 
@@ -141,6 +181,18 @@ export const useNearbyStore = create<NearbyState>((set, get) => ({
     }
   },
 
+  fetchPendingConnections: async () => {
+    const token = useAuthStore.getState().accessToken;
+    if (!token) return;
+
+    try {
+      const data = await api.listPendingConnections();
+      set({ pendingConnections: data.connections.map(connectionToPending) });
+    } catch {
+      // silent fail for polling
+    }
+  },
+
   sendConnectionRequest: async (userId) => {
     try {
       const connection = await api.sendConnectionRequest(userId);
@@ -161,7 +213,63 @@ export const useNearbyStore = create<NearbyState>((set, get) => ({
     }
   },
 
+  acceptConnectionRequest: async (connectionId) => {
+    try {
+      await api.acceptConnection(connectionId);
+      set({
+        pendingConnections: get().pendingConnections.filter(c => c.id !== connectionId),
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  declineConnectionRequest: async (connectionId) => {
+    try {
+      await api.declineConnection(connectionId);
+      set({
+        pendingConnections: get().pendingConnections.filter(c => c.id !== connectionId),
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
   getIntroForUser: (userId) => {
     return get().introductions.find((i) => i.targetUserId === userId);
+  },
+
+  startPolling: () => {
+    const existing = get().pollingInterval;
+    if (existing) return;
+
+    const interval = setInterval(() => {
+      const token = useAuthStore.getState().accessToken;
+      if (!token) return;
+      get().fetchPendingConnections();
+      get().fetchNearbyUsers();
+    }, POLL_INTERVAL_MS);
+
+    set({ pollingInterval: interval });
+  },
+
+  stopPolling: () => {
+    const interval = get().pollingInterval;
+    if (interval) {
+      clearInterval(interval);
+      set({ pollingInterval: null });
+    }
+  },
+
+  refreshAll: async () => {
+    const token = useAuthStore.getState().accessToken;
+    if (!token) return;
+    await Promise.all([
+      get().fetchNearbyUsers(),
+      get().fetchMatchedUsers(),
+      get().fetchPendingConnections(),
+    ]);
   },
 }));
