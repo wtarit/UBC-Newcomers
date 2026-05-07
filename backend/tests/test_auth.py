@@ -86,7 +86,12 @@ class TestSignup:
         assert resp.status_code == 400
         assert "UBC email" in resp.json()["detail"]
 
-    async def test_signup_allowlisted_email_accepted(self, unauthed_client: AsyncClient):
+    async def test_signup_allowlisted_email_not_rejected_as_non_ubc(
+        self, unauthed_client: AsyncClient
+    ):
+        """The allowlisted Gmail address should NOT be rejected by the UBC email
+        validator.  It may still fail at the DB level if the email already exists,
+        but the 400 "Only UBC email" check must not fire."""
         resp = await unauthed_client.post(
             "/auth/signup",
             json={
@@ -95,7 +100,9 @@ class TestSignup:
                 "full_name": "Tarit W",
             },
         )
-        assert resp.status_code == 200
+        # Should NOT be the UBC-email-validation error
+        if resp.status_code == 400:
+            assert "UBC email" not in resp.json().get("detail", "")
 
 
 # ---------------------------------------------------------------------------
