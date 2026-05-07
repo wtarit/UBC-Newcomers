@@ -15,43 +15,6 @@ import { Card } from '@/components/ui/Card';
 import { MatchBadge } from '@/components/ui/MatchBadge';
 import { Ionicons, Feather } from '@expo/vector-icons';
 
-function ScanningPulse() {
-  const pulse1 = useRef(new Animated.Value(0)).current;
-  const pulse2 = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const mkPulse = (a: Animated.Value, d: number) =>
-      Animated.loop(Animated.sequence([
-        Animated.delay(d),
-        Animated.timing(a, { toValue: 1, duration: 2500, useNativeDriver: true }),
-        Animated.timing(a, { toValue: 0, duration: 0, useNativeDriver: true }),
-      ]));
-    const p1 = mkPulse(pulse1, 0); const p2 = mkPulse(pulse2, 1000);
-    p1.start(); p2.start();
-    return () => { p1.stop(); p2.stop(); };
-  }, [pulse1, pulse2]);
-
-  return (
-    <View style={sc.container}>
-      {[pulse1, pulse2].map((p, i) => (
-        <Animated.View key={i} style={[sc.ring, {
-          opacity: p.interpolate({ inputRange: [0,1], outputRange: [0.3,0] }),
-          transform: [{ scale: p.interpolate({ inputRange: [0,1], outputRange: [0.8,3] }) }],
-        }]} />
-      ))}
-      <View style={sc.center}>
-        <Feather name="radio" size={24} color={Brand.accent} />
-      </View>
-    </View>
-  );
-}
-
-const sc = StyleSheet.create({
-  container: { alignItems: 'center', justifyContent: 'center', height: 120, marginVertical: Spacing.md },
-  ring: { position: 'absolute', width: 64, height: 64, borderRadius: 32, borderWidth: 1, borderColor: Brand.accent },
-  center: { width: 56, height: 56, borderRadius: 28, backgroundColor: Surfaces.background, borderWidth: 1, borderColor: Surfaces.border, alignItems: 'center', justifyContent: 'center', zIndex: 2 },
-});
-
 function fmtDist(m: number) {
   if (m < 50) return '< 50m away';
   if (m < 100) return '< 100m away';
@@ -130,7 +93,6 @@ export default function NearbyScreen() {
       <View style={s.hdr}>
         <Text style={s.title}>People Nearby</Text>
         <Text style={s.sub}>{isLoading ? 'Scanning...' : `${sorted.length} people around you`}</Text>
-        <ScanningPulse />
         <View style={s.sortRow}>
           {(['match','distance'] as const).map(k => (
             <TouchableOpacity key={k} onPress={() => setSortBy(k)}

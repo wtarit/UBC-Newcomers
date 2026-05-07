@@ -1,9 +1,10 @@
 /**
- * MatchBadge — Animated compatibility score badge
+ * MatchBadge — Animated compatibility score badge with circular progress
  */
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Brand, Radius, Typography } from '@/constants/Colors';
+import { ProgressRing } from './ProgressRing';
 
 interface MatchBadgeProps {
   score: number;
@@ -19,40 +20,30 @@ function getScoreColor(score: number): string {
 
 export function MatchBadge({ score, size = 'md' }: MatchBadgeProps) {
   const color = getScoreColor(score);
-  const sizeStyles = {
-    sm: { width: 36, height: 36, fontSize: 12 },
-    md: { width: 48, height: 48, fontSize: 16 },
-    lg: { width: 64, height: 64, fontSize: 22 },
+  const sizeConfig = {
+    sm: { size: 40, strokeWidth: 4, fontSize: 10 },
+    md: { size: 56, strokeWidth: 5, fontSize: 13 },
+    lg: { size: 72, strokeWidth: 6, fontSize: 16 },
   };
-  const s = sizeStyles[size];
+  const config = sizeConfig[size];
 
   return (
-    <View
-      style={[
-        styles.badge,
-        {
-          width: s.width,
-          height: s.height,
-          backgroundColor: `${color}20`,
-          borderColor: `${color}60`,
-        },
-      ]}
-    >
-      <Text style={[styles.text, { fontSize: s.fontSize, color }]}>
-        {score}%
-      </Text>
+    <View style={styles.container}>
+      <ProgressRing
+        progress={score}
+        size={config.size}
+        strokeWidth={config.strokeWidth}
+        color={color}
+        label={`${score}%`}
+        fontSize={config.fontSize}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  badge: {
-    borderRadius: Radius.full,
-    borderWidth: 2,
+  container: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  text: {
-    fontFamily: Typography.fonts.h3,
   },
 });

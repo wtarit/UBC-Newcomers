@@ -13,6 +13,7 @@ interface ProgressRingProps {
   color?: string;
   label?: string;
   sublabel?: string;
+  fontSize?: number;
 }
 
 export function ProgressRing({
@@ -22,10 +23,12 @@ export function ProgressRing({
   color = Brand.accent,
   label,
   sublabel,
+  fontSize,
 }: ProgressRingProps) {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
+  const calculatedFontSize = fontSize ?? Math.round(size * 0.2);
 
   return (
     <View style={[styles.container, { width: size, height: size }]}>
@@ -55,7 +58,7 @@ export function ProgressRing({
         />
       </Svg>
       <View style={styles.labelContainer}>
-        <Text style={[styles.label, { color }]}>{label ?? `${progress}%`}</Text>
+        <Text style={[styles.label, { color, fontSize: calculatedFontSize }]}>{label ?? `${progress}%`}</Text>
         {sublabel && <Text style={styles.sublabel}>{sublabel}</Text>}
       </View>
     </View>
@@ -74,8 +77,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   label: {
-    fontFamily: Typography.fonts.h2,
-    fontSize: 24,
+    fontFamily: Typography.fonts.h3,
   },
   sublabel: {
     fontFamily: Typography.fonts.caption,
