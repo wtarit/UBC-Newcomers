@@ -22,7 +22,15 @@ export default function UserDetailScreen() {
   const [accepted, setAccepted] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
 
-  const user = [...nearbyUsers, ...matchedUsers].find(u => u.id === userId);
+  const nearbyUser = nearbyUsers.find((u) => u.id === userId);
+  const matchedUser = matchedUsers.find((u) => u.id === userId);
+  const user = nearbyUser
+    ? {
+        ...nearbyUser,
+        matchScore: matchedUser?.matchScore ?? nearbyUser.matchScore,
+        matchReason: matchedUser?.matchReason ?? nearbyUser.matchReason,
+      }
+    : matchedUser;
   if (!user) return <View style={s.container}><Text style={s.err}>User not found</Text></View>;
 
   const existingIntro = getIntroForUser(user.id);
