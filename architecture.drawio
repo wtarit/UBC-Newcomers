@@ -1,0 +1,79 @@
+<mxfile host="app.diagrams.net" agent="Codex">
+  <diagram id="ubc-arch-1" name="Architecture">
+    <mxGraphModel dx="1275" dy="1071" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="clientGroup" parent="1" style="swimlane;rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f0fe;strokeColor=#6c8ebf;fontStyle=1;" value="Client" vertex="1">
+          <mxGeometry height="520" width="300" x="40" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="mobileApp" parent="clientGroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;" value="Expo React Native App&#xa;- Expo Router&#xa;- Zustand Stores&#xa;- Nearby/Connections/Profile flows" vertex="1">
+          <mxGeometry height="140" width="260" x="20" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="apiService" parent="clientGroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;" value="frontend/services/api.ts&#xa;- Auth token attach&#xa;- Refresh on 401&#xa;- REST calls to backend" vertex="1">
+          <mxGeometry height="120" width="260" x="20" y="220" as="geometry" />
+        </mxCell>
+        <mxCell id="mapsUi" parent="clientGroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;" value="Map UI&#xa;- Android: Google Maps&#xa;- iOS: Apple Maps (MapKit)" vertex="1">
+          <mxGeometry height="90" width="260" x="20" y="370" as="geometry" />
+        </mxCell>
+        <mxCell id="backendGroup" parent="1" style="swimlane;rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;" value="Backend API" vertex="1">
+          <mxGeometry height="600" width="470" x="410" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="fastapi" parent="backendGroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;" value="FastAPI (backend/main.py)&#xa;- Routers: auth, users, matching, connections, events, landmarks, meetups&#xa;- CORS + lifespan startup seed" vertex="1">
+          <mxGeometry height="120" width="430" x="20" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="deps" parent="backendGroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;" value="Dependencies&#xa;- get_current_user()&#xa;- Cognito token validation" vertex="1">
+          <mxGeometry height="80" width="200" x="20" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="domain" parent="backendGroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;" value="Domain Services&#xa;- Bedrock profile matching&#xa;- S3 presigned upload/download&#xa;- SNS push&#xa;- Scraper" vertex="1">
+          <mxGeometry height="120" width="210" x="240" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="orm" parent="backendGroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;" value="SQLAlchemy Async ORM&#xa;- Models: User, Connection, ConnectionMessage, Event, Landmark, Meetup&#xa;- Schemas + router serialization" vertex="1">
+          <mxGeometry height="110" width="430" x="20" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="matchingDetail" parent="backendGroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;" value="Matching Flow&#xa;1) /matching/users&#xa;2) Build profile text&#xa;3) Bedrock prompt -&gt; score/reason&#xa;4) Fallback deterministic scorer if Bedrock fails" vertex="1">
+          <mxGeometry height="110" width="430" x="20" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="dataGroup" parent="1" style="swimlane;rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" value="Data Layer" vertex="1">
+          <mxGeometry height="200" width="220" x="990" y="470" as="geometry" />
+        </mxCell>
+        <mxCell id="postgres" parent="dataGroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" value="PostgreSQL&#xa;- users&#xa;- connections&#xa;- connection_messages&#xa;- events&#xa;- landmarks&#xa;- meetups" vertex="1">
+          <mxGeometry height="120" width="180" x="20" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="awsGroup" parent="1" style="swimlane;rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;" value="AWS Services" vertex="1">
+          <mxGeometry height="320" width="320" x="940" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="cognito" parent="awsGroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;" value="Cognito&#xa;- Signup/Login/Refresh&#xa;- Access token validation" vertex="1">
+          <mxGeometry height="90" width="130" x="20" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="bedrock" parent="awsGroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;" value="Bedrock Runtime&#xa;- Profile compatibility scoring&#xa;- Match reason generation" vertex="1">
+          <mxGeometry height="90" width="130" x="170" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="s3" parent="awsGroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;" value="S3&#xa;- Profile picture storage&#xa;- Presigned URLs" vertex="1">
+          <mxGeometry height="90" width="130" x="20" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="sns" parent="awsGroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;" value="SNS&#xa;- Push notifications (service hook)" vertex="1">
+          <mxGeometry height="90" width="130" x="170" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="edgeClientApi" edge="1" parent="1" source="apiService" style="endArrow=block;html=1;rounded=0;strokeColor=#333333;" target="fastapi" value="HTTPS REST">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edgeFastapiDb" edge="1" parent="1" source="orm" style="endArrow=block;html=1;rounded=0;strokeColor=#333333;" target="postgres" value="Async SQLAlchemy">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edgeDepsCognito" edge="1" parent="1" source="deps" style="endArrow=block;html=1;rounded=0;strokeColor=#333333;" target="cognito" value="Token/User auth">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edgeDomainBedrock" edge="1" parent="1" source="domain" style="endArrow=block;html=1;rounded=0;strokeColor=#333333;" target="bedrock" value="Invoke model">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edgeDomainS3" edge="1" parent="1" source="domain" style="endArrow=block;html=1;rounded=0;strokeColor=#333333;" target="s3" value="Presigned URL ops">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edgeDomainSns" edge="1" parent="1" source="domain" style="endArrow=block;html=1;rounded=0;strokeColor=#333333;" target="sns" value="Publish push">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
