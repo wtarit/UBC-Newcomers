@@ -1,6 +1,6 @@
 # UBC Newcomers
 
-Community app for UBC newcomers to find events, meet people, and build connections. Built for AWS Hackathon.
+Community app for UBC newcomers to find events, meet people, and build connections.
 
 ## Architecture
 
