@@ -84,9 +84,9 @@ export const api = {
       method: 'POST', body: { email, password }, auth: false,
     }),
 
-  refreshToken: (refresh_token: string) =>
+  refreshToken: (refresh_token: string, email?: string | null) =>
     request<{ access_token: string; id_token: string; token_type: string }>('/auth/refresh', {
-      method: 'POST', body: { refresh_token }, auth: false,
+      method: 'POST', body: { refresh_token, email }, auth: false,
     }),
 
   forgotPassword: (email: string) =>
@@ -122,26 +122,21 @@ export const api = {
       params: { content_type },
     }),
 
-  uploadProfilePhoto: async (localUri: string): Promise<UserResponse> => {
-    const BASE = process.env.EXPO_PUBLIC_API_URL || 'http://ubc-newcomers-alb-2075450770.us-west-2.elb.amazonaws.com';
-    const token = useAuthStore.getState().accessToken;
-    if (!token) throw new ApiError(401, 'Not authenticated');
+  uploadProfilePhoto: async (localUri: string, contentType = 'image/jpeg'): Promise<UserResponse> => {
+    const { upload_url } = await api.getPresignedUpload(contentType);
 
-    const form = new FormData();
-    // React Native FormData accepts { uri, name, type }
-    form.append('file', { uri: localUri, name: 'avatar.jpg', type: 'image/jpeg' } as any);
-
-    const res = await fetch(`${BASE}/users/me/photo`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: form,
+    const blob = await fetch(localUri).then(r => r.blob());
+    const putRes = await fetch(upload_url, {
+      method: 'PUT',
+      headers: { 'Content-Type': contentType },
+      body: blob,
     });
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: 'Upload failed' }));
-      throw new ApiError(res.status, err.detail || 'Upload failed');
+    if (!putRes.ok) {
+      throw new ApiError(putRes.status, 'S3 upload failed');
     }
-    return res.json();
+
+    return api.getMe();
   },
 
   getStats: () => request<UserStatsResponse>('/users/me/stats'),

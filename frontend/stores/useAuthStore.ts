@@ -7,6 +7,7 @@ const TOKEN_KEYS = {
   access: 'auth_access_token',
   refresh: 'auth_refresh_token',
   id: 'auth_id_token',
+  email: 'auth_email',
 } as const;
 
 async function saveToken(key: string, value: string | null) {
@@ -30,6 +31,7 @@ interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   idToken: string | null;
+  email: string | null;
   user: UserResponse | null;
   isLoading: boolean;
   isRestoring: boolean;
@@ -48,6 +50,7 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set, get) => ({
   accessToken: null,
   refreshToken: null,
+  email: null,
   idToken: null,
   user: null,
   isLoading: false,
@@ -57,10 +60,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   restoreSession: async () => {
     set({ isRestoring: true });
     try {
-      const [accessToken, refreshToken, idToken] = await Promise.all([
+      const [accessToken, refreshToken, idToken, email] = await Promise.all([
         getToken(TOKEN_KEYS.access),
         getToken(TOKEN_KEYS.refresh),
         getToken(TOKEN_KEYS.id),
+        getToken(TOKEN_KEYS.email),
       ]);
 
       if (!refreshToken) {
@@ -68,16 +72,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return;
       }
 
-      set({ accessToken, refreshToken, idToken });
+      set({ accessToken, refreshToken, idToken, email });
 
-      const refreshed = await get().refresh();
-      if (refreshed) {
+      try {
         await get().fetchUser();
-      } else {
-        await get().logout();
+      } catch {
+        const refreshed = await get().refresh();
+        if (refreshed) {
+          await get().fetchUser();
+        } else {
+          await get().logout();
+        }
       }
     } catch {
-      set({ accessToken: null, refreshToken: null, idToken: null });
+      set({ accessToken: null, refreshToken: null, idToken: null, email: null });
     } finally {
       set({ isRestoring: false });
     }
@@ -95,9 +103,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         saveToken(TOKEN_KEYS.access, accessToken),
         saveToken(TOKEN_KEYS.refresh, refreshToken),
         saveToken(TOKEN_KEYS.id, idToken),
+        saveToken(TOKEN_KEYS.email, email),
       ]);
 
-      set({ accessToken, refreshToken, idToken, isLoading: false });
+      set({ accessToken, refreshToken, idToken, email, isLoading: false });
       await get().fetchUser();
       return true;
     } catch (e: any) {
@@ -131,10 +140,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   refresh: async () => {
-    const { refreshToken } = get();
+    const { refreshToken, email } = get();
     if (!refreshToken) return false;
     try {
-      const tokens = await api.refreshToken(refreshToken);
+      const tokens = await api.refreshToken(refreshToken, email);
       const accessToken = tokens.access_token;
       const idToken = tokens.id_token;
 
@@ -155,11 +164,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       saveToken(TOKEN_KEYS.access, null),
       saveToken(TOKEN_KEYS.refresh, null),
       saveToken(TOKEN_KEYS.id, null),
+      saveToken(TOKEN_KEYS.email, null),
     ]);
     set({
       accessToken: null,
       refreshToken: null,
       idToken: null,
+      email: null,
       user: null,
       error: null,
     });

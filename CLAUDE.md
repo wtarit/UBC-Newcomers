@@ -11,19 +11,7 @@ Community app for UBC newcomers to find events, meet people, and build connectio
 
 ## AWS Resources (us-west-2)
 
-| Resource | ID |
-|---|---|
-| RDS PostgreSQL | `ubc-newcomers-db.c7xpjgqlgevo.us-west-2.rds.amazonaws.com` |
-| Cognito User Pool | `us-west-2_Cb7YyLReb` |
-| Cognito App Client | `7qnnl3dtml6c1p7u41upjarc1b` |
-| S3 (profile pics) | `ubc-newcomers-profile-pics-840765342118` |
-| Security Group | `sg-033d0cba6c3d91a42` |
-| ECR Repository | `ubc-newcomers-backend` |
-| ECS Cluster | `ubc-newcomers-cluster` |
-| ECS Service | `ubc-newcomers-backend` |
-| ALB | `ubc-newcomers-alb-2075450770.us-west-2.elb.amazonaws.com` |
-| Task Execution Role | `ecsTaskExecutionRole` |
-| Task Role | `ubc-newcomers-task-role` |
+All resource IDs (RDS host, Cognito pool/client, S3 bucket, ALB, etc.) are in `backend/.env`. Frontend env is in `frontend/.env`. See respective `.env.example` files for the full list.
 
 ## Dev Setup
 
@@ -117,27 +105,22 @@ cd backend
 uv run pytest tests/ -v
 ```
 
-Test account `tarit.witworrasakul@gmail.com` is allowlisted in `test_allowed_emails` for integration tests.
+Test accounts are allowlisted via `test_allowed_emails` in config.
 
 ## Deployment
 
-Docker image pushed to ECR, runs on ECS Fargate behind ALB.
-
-Live API: `http://ubc-newcomers-alb-2075450770.us-west-2.elb.amazonaws.com`
-Swagger docs: `http://ubc-newcomers-alb-2075450770.us-west-2.elb.amazonaws.com/docs`
+Docker image pushed to ECR, runs on ECS Fargate behind ALB. See `.env` for ECR URI, ALB hostname, and ECS cluster/service names.
 
 ```bash
-# Build and push
-aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 840765342118.dkr.ecr.us-west-2.amazonaws.com
+# Build and push (substitute values from .env)
+aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com
 docker build -t ubc-newcomers-backend backend/
-docker tag ubc-newcomers-backend:latest 840765342118.dkr.ecr.us-west-2.amazonaws.com/ubc-newcomers-backend:latest
-docker push 840765342118.dkr.ecr.us-west-2.amazonaws.com/ubc-newcomers-backend:latest
+docker tag ubc-newcomers-backend:latest $AWS_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/ubc-newcomers-backend:latest
+docker push $AWS_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/ubc-newcomers-backend:latest
 # Force new deployment
 aws ecs update-service --cluster ubc-newcomers-cluster --service ubc-newcomers-backend --force-new-deployment
 ```
 
 ## DB Credentials
 
-- User: `ubcadmin`
-- Password: in `.env` (not committed)
-- DB name: `ubcnewcomers`
+All in `.env` (not committed).

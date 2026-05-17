@@ -109,18 +109,13 @@ export default function ProfileScreen() {
 
       const localUri = result.assets[0].uri;
 
-      // Show local preview immediately
       setAvatarUri(localUri);
 
-      // Upload to backend → stored in S3, key saved to DB
       const updated = await api.uploadProfilePhoto(localUri);
-
-      // Replace local preview with the signed S3 URL returned by the server
       if (updated.profile_picture_url) {
         setAvatarUri(updated.profile_picture_url);
       }
 
-      // Refresh auth store so the rest of the app picks up the new picture
       await fetchUser();
     } catch (err) {
       console.error('Avatar upload error', err);
