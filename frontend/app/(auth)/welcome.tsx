@@ -9,7 +9,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 
 export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();
-  const { signInWithGoogle, isLoading } = useAuthStore();
+  const { signInWithGoogle, isLoading, error, clearError } = useAuthStore();
 
   const handleGoogle = async () => {
     await signInWithGoogle();
@@ -34,6 +34,9 @@ export default function WelcomeScreen() {
       </View>
 
       <View style={s.actions}>
+        {error && (
+          <Text style={s.error} onPress={clearError}>{error}</Text>
+        )}
         <Button
           title="Continue with Google"
           variant="primary"
@@ -85,5 +88,9 @@ const s = StyleSheet.create({
     backgroundColor: `${Brand.accent}08`, alignItems: 'center', justifyContent: 'center',
   },
   featureText: { flex: 1, fontFamily: Typography.fonts.body, fontSize: 15, color: Brand.primary, lineHeight: 22 },
+  error: {
+    fontFamily: Typography.fonts.body, fontSize: 14, color: '#E53935',
+    textAlign: 'center', paddingHorizontal: Spacing.md,
+  },
   actions: { gap: Spacing.sm, alignItems: 'center' },
 });

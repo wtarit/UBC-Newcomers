@@ -1,5 +1,16 @@
-import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
+import {
+  getAuth,
+  signInWithCredential,
+  signInWithCustomToken as firebaseSignInWithCustomToken,
+  signOut,
+  GoogleAuthProvider,
+} from '@react-native-firebase/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import type { FirebaseAuthTypes } from '@react-native-firebase/auth';
+
+GoogleSignin.configure({
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+});
 
 export interface AuthTokens {
   idToken: string;
@@ -17,26 +28,26 @@ export async function signInWithGoogle(): Promise<AuthTokens> {
   if (!response.data?.idToken) {
     throw new Error('Google sign-in failed: no ID token');
   }
-  const credential = auth.GoogleAuthProvider.credential(response.data.idToken);
-  const result = await auth().signInWithCredential(credential);
+  const credential = GoogleAuthProvider.credential(response.data.idToken);
+  const result = await signInWithCredential(getAuth(), credential);
   return getTokensFromUser(result.user);
 }
 
 export async function signInWithCustomToken(customToken: string): Promise<AuthTokens> {
-  const result = await auth().signInWithCustomToken(customToken);
+  const result = await firebaseSignInWithCustomToken(getAuth(), customToken);
   return getTokensFromUser(result.user);
 }
 
 export async function refreshIdToken(): Promise<string | null> {
-  const user = auth().currentUser;
+  const user = getAuth().currentUser;
   if (!user) return null;
   return user.getIdToken(true);
 }
 
 export async function logout(): Promise<void> {
-  await auth().signOut();
+  await signOut(getAuth());
 }
 
 export function getCurrentUser(): FirebaseAuthTypes.User | null {
-  return auth().currentUser;
+  return getAuth().currentUser;
 }

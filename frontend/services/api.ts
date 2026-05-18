@@ -1,6 +1,20 @@
-import { useAuthStore } from '@/stores/useAuthStore';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://ubc-newcomers-alb-2075450770.us-west-2.elb.amazonaws.com';
+type AuthProvider = {
+  getToken: () => string | null;
+  refresh: () => Promise<boolean>;
+  logout: () => Promise<void>;
+};
+
+let auth: AuthProvider = {
+  getToken: () => null,
+  refresh: async () => false,
+  logout: async () => {},
+};
+
+export function configureAuth(provider: AuthProvider) {
+  auth = provider;
+}
 
 type RequestOptions = {
   method?: string;
@@ -17,7 +31,7 @@ class ApiError extends Error {
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, auth = true, params } = options;
+  const { method = 'GET', body, auth: useAuth = true, params } = options;
 
   let url = `${BASE_URL}${path}`;
   if (params) {
@@ -32,8 +46,8 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     'Content-Type': 'application/json',
   };
 
-  if (auth) {
-    const token = useAuthStore.getState().accessToken;
+  if (useAuth) {
+    const token = auth.getToken();
     if (!token) throw new ApiError(401, 'Not authenticated');
     headers['Authorization'] = `Bearer ${token}`;
   }
@@ -44,10 +58,10 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  if (res.status === 401 && auth) {
-    const refreshed = await useAuthStore.getState().refresh();
+  if (res.status === 401 && useAuth) {
+    const refreshed = await auth.refresh();
     if (refreshed) {
-      headers['Authorization'] = `Bearer ${useAuthStore.getState().accessToken}`;
+      headers['Authorization'] = `Bearer ${auth.getToken()}`;
       const retry = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined });
       if (!retry.ok) {
         const err = await retry.json().catch(() => ({ detail: 'Request failed' }));
@@ -55,7 +69,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       }
       return retry.json();
     }
-    useAuthStore.getState().logout();
+    auth.logout();
     throw new ApiError(401, 'Session expired');
   }
 

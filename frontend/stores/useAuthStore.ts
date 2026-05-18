@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import * as firebase from '@/services/firebase';
-import { api, type UserResponse } from '@/services/api';
+import { api, configureAuth, type UserResponse } from '@/services/api';
 
 const TOKEN_KEYS = {
   idToken: 'auth_id_token',
@@ -223,3 +223,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   clearError: () => set({ error: null }),
 }));
+
+configureAuth({
+  getToken: () => useAuthStore.getState().accessToken,
+  refresh: () => useAuthStore.getState().refresh(),
+  logout: () => useAuthStore.getState().logout(),
+});
