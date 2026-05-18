@@ -1,55 +1,30 @@
 from pydantic import BaseModel, EmailStr
 
 
-class SignupRequest(BaseModel):
+class OTPSendRequest(BaseModel):
     email: EmailStr
-    password: str
-    full_name: str
-
-    model_config = {"json_schema_extra": {"examples": [{"email": "student@student.ubc.ca", "password": "SecurePass1", "full_name": "Jane Doe"}]}}
 
 
-class SignupResponse(BaseModel):
+class OTPSendResponse(BaseModel):
     message: str
-    cognito_sub: str
+    expires_in_seconds: int
 
 
-class VerifyEmailRequest(BaseModel):
+class OTPVerifyRequest(BaseModel):
     email: EmailStr
-    confirmation_code: str
+    code: str
 
 
-class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str
+class OTPVerifyResponse(BaseModel):
+    firebase_custom_token: str
+    is_new_user: bool
+    ubc_verified: bool
 
 
-class LoginResponse(BaseModel):
-    access_token: str
-    refresh_token: str
-    id_token: str
-    token_type: str = "Bearer"
-
-
-class RefreshTokenRequest(BaseModel):
-    refresh_token: str
-
-
-class RefreshTokenResponse(BaseModel):
-    access_token: str
-    id_token: str
-    token_type: str = "Bearer"
-
-
-class ForgotPasswordRequest(BaseModel):
+class UBCVerifySendRequest(BaseModel):
     email: EmailStr
 
 
-class ResetPasswordRequest(BaseModel):
+class UBCVerifyConfirmRequest(BaseModel):
     email: EmailStr
-    confirmation_code: str
-    new_password: str
-
-
-class MessageResponse(BaseModel):
-    message: str
+    code: str

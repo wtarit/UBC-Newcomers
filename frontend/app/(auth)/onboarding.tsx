@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TextInput, ScrollView,
   TouchableOpacity, KeyboardAvoidingView, Platform,
@@ -11,6 +11,18 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { api } from '@/services/api';
 import { Feather } from '@expo/vector-icons';
 
+function getNameFromIdToken(idToken: string | null): string {
+  if (!idToken) return '';
+  try {
+    const parts = idToken.split('.');
+    if (parts.length !== 3) return '';
+    const payload = JSON.parse(atob(parts[1]));
+    return payload.name || '';
+  } catch {
+    return '';
+  }
+}
+
 const FACULTIES = [
   'Arts', 'Science', 'Applied Science', 'Commerce', 'Forestry',
   'Land & Food Systems', 'Education', 'Kinesiology', 'Medicine', 'Pharmacy',
@@ -22,14 +34,17 @@ const INTEREST_OPTIONS = [
   'Volunteering', 'Film', 'Dance', 'Science', 'Business', 'Languages',
 ];
 
-const TOTAL_STEPS = 5;
-
 export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
-  const { fetchUser } = useAuthStore();
+  const { fetchUser, idToken } = useAuthStore();
+  const nameFromToken = useMemo(() => getNameFromIdToken(idToken), [idToken]);
+  const needsNameStep = !nameFromToken;
+  const TOTAL_STEPS = needsNameStep ? 6 : 5;
+
   const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [fullName, setFullName] = useState(nameFromToken);
   const [faculty, setFaculty] = useState('');
   const [major, setMajor] = useState('');
   const [yearStanding, setYearStanding] = useState<number | null>(null);
@@ -45,8 +60,12 @@ export default function OnboardingScreen() {
     );
   };
 
+  const offset = needsNameStep ? 1 : 0;
+
   const canAdvance = () => {
-    switch (step) {
+    if (needsNameStep && step === 0) return fullName.trim().length > 0;
+    const s = step - offset;
+    switch (s) {
       case 0: return faculty.length > 0;
       case 1: return major.trim().length > 0 && yearStanding !== null;
       case 2: return origin.trim().length > 0;
@@ -64,6 +83,7 @@ export default function OnboardingScreen() {
     setIsSubmitting(true);
     try {
       await api.onboarding({
+        full_name: fullName.trim(),
         faculty,
         major: major.trim(),
         year_standing: yearStanding!,
@@ -106,11 +126,12 @@ export default function OnboardingScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {step === 0 && <FacultyStep faculty={faculty} setFaculty={setFaculty} />}
-          {step === 1 && <ProgramStep major={major} setMajor={setMajor} year={yearStanding} setYear={setYearStanding} />}
-          {step === 2 && <OriginStep origin={origin} setOrigin={setOrigin} />}
-          {step === 3 && <InterestsStep interests={interests} toggleInterest={toggleInterest} />}
-          {step === 4 && <BioStep bio={bio} setBio={setBio} />}
+          {needsNameStep && step === 0 && <NameStep name={fullName} setName={setFullName} />}
+          {step === offset + 0 && (!needsNameStep || step > 0) && <FacultyStep faculty={faculty} setFaculty={setFaculty} />}
+          {step === offset + 1 && <ProgramStep major={major} setMajor={setMajor} year={yearStanding} setYear={setYearStanding} />}
+          {step === offset + 2 && <OriginStep origin={origin} setOrigin={setOrigin} />}
+          {step === offset + 3 && <InterestsStep interests={interests} toggleInterest={toggleInterest} />}
+          {step === offset + 4 && <BioStep bio={bio} setBio={setBio} />}
         </ScrollView>
 
         <View style={[s.footer, { paddingBottom: insets.bottom + 16 }]}>
@@ -131,6 +152,29 @@ export default function OnboardingScreen() {
         </View>
       </View>
     </KeyboardAvoidingView>
+  );
+}
+
+function NameStep({ name, setName }: { name: string; setName: (n: string) => void }) {
+  return (
+    <View style={s.stepContent}>
+      <Text style={s.stepTitle}>What's your name?</Text>
+      <Text style={s.stepDesc}>This is how other people on campus will see you</Text>
+
+      <View style={s.field}>
+        <Text style={s.label}>Full Name</Text>
+        <TextInput
+          style={s.input}
+          placeholder="Jane Doe"
+          placeholderTextColor={Brand.secondary}
+          value={name}
+          onChangeText={setName}
+          autoCapitalize="words"
+          autoComplete="name"
+          autoFocus
+        />
+      </View>
+    </View>
   );
 }
 

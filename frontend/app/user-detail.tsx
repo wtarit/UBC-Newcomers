@@ -51,6 +51,7 @@ export default function UserDetailScreen() {
           distanceMeters: 0,
           profilePictureUrl: u.profile_picture_url,
           isAvailableToMeet: u.is_available_to_meet,
+          ubcVerified: u.ubc_verified,
           connectionsCount: u.connections_count,
         });
       }).catch(() => {}).finally(() => setLoading(false));

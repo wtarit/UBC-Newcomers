@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 
 class OnboardingRequest(BaseModel):
+    full_name: str
     major: str | None = None
     year_standing: int | None = None
     origin: str | None = None
@@ -54,10 +55,10 @@ class UserResponse(BaseModel):
     home_latitude: float | None
     home_longitude: float | None
     is_available_to_meet: bool
+    ubc_verified: bool
     connections_count: int
     meetups_completed: int
     events_attended: int
-    onboarding_completed: bool
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -74,6 +75,7 @@ class UserPublicResponse(BaseModel):
     bio: str | None
     profile_picture_url: str | None = None
     is_available_to_meet: bool
+    ubc_verified: bool
     connections_count: int
 
     model_config = {"from_attributes": True}

@@ -15,6 +15,7 @@ export interface NearbyUser {
   distanceMeters: number;
   profilePictureUrl: string | null;
   isAvailableToMeet: boolean;
+  ubcVerified: boolean;
   connectionsCount: number;
   matchReason?: string;
 }
@@ -77,6 +78,7 @@ function apiUserToNearbyUser(item: NearbyUserResponse): NearbyUser {
     distanceMeters: Math.round(item.distance_km * 1000),
     profilePictureUrl: item.user.profile_picture_url,
     isAvailableToMeet: item.user.is_available_to_meet,
+    ubcVerified: item.user.ubc_verified,
     connectionsCount: item.user.connections_count,
   };
 }
@@ -94,6 +96,7 @@ function matchedUserToNearbyUser(item: MatchedUserResponse): NearbyUser {
     distanceMeters: 0,
     profilePictureUrl: item.user.profile_picture_url,
     isAvailableToMeet: item.user.is_available_to_meet,
+    ubcVerified: item.user.ubc_verified,
     connectionsCount: item.user.connections_count,
     matchReason: item.match_reason,
   };

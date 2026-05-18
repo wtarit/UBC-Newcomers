@@ -211,7 +211,7 @@ class TestCompleteMeetup:
         """Meetup where test_user is neither creator nor joiner."""
         third_user = User(
             id=uuid.uuid4(),
-            cognito_sub="test-sub-333",
+            firebase_uid="test-uid-333",
             email="third@student.ubc.ca",
             full_name="Third User",
         )

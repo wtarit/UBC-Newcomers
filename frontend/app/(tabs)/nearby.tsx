@@ -106,6 +106,7 @@ function UserCard({ user, onPress }: { user: NearbyUser; onPress: () => void }) 
           <View style={cc.info}>
             <View style={cc.nameRow}>
               <Text style={cc.name}>{user.displayName}</Text>
+              {user.ubcVerified && <Feather name="check-circle" size={14} color={Brand.accent} />}
               <Text style={cc.dist}>{fmtDist(user.distanceMeters)}</Text>
             </View>
             <Text style={cc.prog}>{user.program} · Year {user.year}</Text>

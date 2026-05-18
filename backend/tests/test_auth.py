@@ -1,171 +1,108 @@
-"""
-Tests for the /auth endpoints.
-
-Covers:
-- UBC email validation (accepts *.ubc.ca, rejects others)
-- Test-allowlisted email bypass
-- Signup, verify, login, refresh, forgot/reset password flows (with mocked Cognito)
-"""
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.cognito import validate_ubc_email
-from fastapi import HTTPException
-
-# ---------------------------------------------------------------------------
-# Email validation (unit tests, no HTTP needed)
-# ---------------------------------------------------------------------------
-class TestEmailValidation:
-    """Unit tests for the validate_ubc_email helper."""
-
-    def test_accepts_student_ubc_ca(self):
-        validate_ubc_email("alice@student.ubc.ca")
-
-    def test_accepts_ubc_ca(self):
-        validate_ubc_email("prof@ubc.ca")
-
-    def test_accepts_alumni_ubc_ca(self):
-        validate_ubc_email("grad@alumni.ubc.ca")
-
-    def test_accepts_mail_ubc_ca(self):
-        validate_ubc_email("student@mail.ubc.ca")
-
-    def test_accepts_subdomain_of_ubc_ca(self):
-        validate_ubc_email("someone@cs.ubc.ca")
-
-    def test_rejects_gmail(self):
-        with pytest.raises(HTTPException) as exc_info:
-            validate_ubc_email("user@gmail.com")
-        assert exc_info.value.status_code == 400
-        assert "UBC email" in exc_info.value.detail
-
-    def test_rejects_outlook(self):
-        with pytest.raises(HTTPException):
-            validate_ubc_email("user@outlook.com")
-
-    def test_rejects_similar_domain(self):
-        with pytest.raises(HTTPException):
-            validate_ubc_email("trick@notubc.ca")
-
-    def test_allowlisted_email_bypasses_check(self):
-        """The test email in settings should pass even though it is gmail."""
-        validate_ubc_email("tarit.witworrasakul@gmail.com")
-
-    def test_allowlist_is_case_insensitive(self):
-        validate_ubc_email("Tarit.Witworrasakul@gmail.com")
+from app.models.otp_code import OTPCode
 
 
-# ---------------------------------------------------------------------------
-# Signup endpoint
-# ---------------------------------------------------------------------------
-class TestSignup:
-    async def test_signup_ubc_email_success(self, unauthed_client: AsyncClient):
-        resp = await unauthed_client.post(
-            "/auth/signup",
-            json={
-                "email": "new@student.ubc.ca",
-                "password": "StrongPass1!",
-                "full_name": "New Student",
-            },
-        )
+class TestOTPSend:
+    async def test_send_otp_success(self, unauthed_client: AsyncClient):
+        resp = await unauthed_client.post("/auth/otp/send", json={"email": "user@gmail.com"})
         assert resp.status_code == 200
         data = resp.json()
-        assert "cognito_sub" in data
-        assert data["message"] == "Verification code sent to your email"
+        assert data["expires_in_seconds"] == 600
 
-    async def test_signup_non_ubc_email_rejected(self, unauthed_client: AsyncClient):
-        resp = await unauthed_client.post(
-            "/auth/signup",
-            json={
-                "email": "person@gmail.com",
-                "password": "StrongPass1!",
-                "full_name": "Bad Email",
-            },
+    async def test_send_otp_invalid_email(self, unauthed_client: AsyncClient):
+        resp = await unauthed_client.post("/auth/otp/send", json={"email": "not-an-email"})
+        assert resp.status_code == 422
+
+    async def test_send_otp_rate_limit(self, unauthed_client: AsyncClient, db_session: AsyncSession):
+        email = "ratelimit@test.com"
+        for _ in range(3):
+            otp = OTPCode(
+                email=email,
+                code="123456",
+                expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
+            )
+            db_session.add(otp)
+        await db_session.flush()
+
+        resp = await unauthed_client.post("/auth/otp/send", json={"email": email})
+        assert resp.status_code == 429
+
+
+class TestOTPVerify:
+    async def _create_otp(self, db_session: AsyncSession, email: str = "verify@test.com", code: str = "123456") -> OTPCode:
+        otp = OTPCode(
+            email=email,
+            code=code,
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
         )
+        db_session.add(otp)
+        await db_session.flush()
+        return otp
+
+    async def test_verify_success_new_user(self, unauthed_client: AsyncClient, db_session: AsyncSession):
+        await self._create_otp(db_session, "newuser@gmail.com", "654321")
+        resp = await unauthed_client.post("/auth/otp/verify", json={"email": "newuser@gmail.com", "code": "654321"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["firebase_custom_token"] == "mock-custom-token"
+        assert data["is_new_user"] is True
+        assert data["ubc_verified"] is False
+
+    async def test_verify_success_ubc_email(self, unauthed_client: AsyncClient, db_session: AsyncSession):
+        await self._create_otp(db_session, "student@student.ubc.ca", "111222")
+        resp = await unauthed_client.post("/auth/otp/verify", json={"email": "student@student.ubc.ca", "code": "111222"})
+        assert resp.status_code == 200
+        assert resp.json()["ubc_verified"] is True
+
+    async def test_verify_wrong_code(self, unauthed_client: AsyncClient, db_session: AsyncSession):
+        await self._create_otp(db_session, "wrong@test.com", "123456")
+        resp = await unauthed_client.post("/auth/otp/verify", json={"email": "wrong@test.com", "code": "000000"})
         assert resp.status_code == 400
-        assert "UBC email" in resp.json()["detail"]
+        assert "Invalid code" in resp.json()["detail"]
 
-    def test_signup_allowlisted_email_passes_cognito_validation(self):
-        """cognito.sign_up should NOT raise an HTTPException for the
-        allowlisted Gmail address.  This verifies the email bypass works
-        end-to-end through the sign_up function (without hitting the DB)."""
-        from app.services.cognito import sign_up
-
-        # sign_up calls validate_ubc_email first, then _client().sign_up.
-        # If validate_ubc_email raises, sign_up propagates the HTTPException.
-        # We only care that the email check passes -- the AWS mock handles the rest.
-        result = sign_up(
-            "tarit.witworrasakul@gmail.com", "StrongPass1!", "Tarit W"
+    async def test_verify_expired_code(self, unauthed_client: AsyncClient, db_session: AsyncSession):
+        otp = OTPCode(
+            email="expired@test.com",
+            code="123456",
+            expires_at=datetime.now(timezone.utc) - timedelta(minutes=1),
         )
-        assert result == "mock-cognito-sub-123"
+        db_session.add(otp)
+        await db_session.flush()
 
+        resp = await unauthed_client.post("/auth/otp/verify", json={"email": "expired@test.com", "code": "123456"})
+        assert resp.status_code == 400
+        assert "No valid code" in resp.json()["detail"]
 
-# ---------------------------------------------------------------------------
-# Verify email
-# ---------------------------------------------------------------------------
-class TestVerifyEmail:
-    async def test_verify_success(self, unauthed_client: AsyncClient):
-        resp = await unauthed_client.post(
-            "/auth/verify",
-            json={"email": "new@student.ubc.ca", "confirmation_code": "123456"},
+    async def test_verify_max_attempts(self, unauthed_client: AsyncClient, db_session: AsyncSession):
+        otp = OTPCode(
+            email="maxattempts@test.com",
+            code="123456",
+            attempts=5,
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
         )
-        assert resp.status_code == 200
-        assert resp.json()["message"] == "Email verified successfully"
+        db_session.add(otp)
+        await db_session.flush()
 
+        resp = await unauthed_client.post("/auth/otp/verify", json={"email": "maxattempts@test.com", "code": "123456"})
+        assert resp.status_code == 400
+        assert "Too many attempts" in resp.json()["detail"]
 
-# ---------------------------------------------------------------------------
-# Login
-# ---------------------------------------------------------------------------
-class TestLogin:
-    async def test_login_returns_tokens(self, unauthed_client: AsyncClient):
-        resp = await unauthed_client.post(
-            "/auth/login",
-            json={"email": "new@student.ubc.ca", "password": "StrongPass1!"},
+    async def test_verify_already_used(self, unauthed_client: AsyncClient, db_session: AsyncSession):
+        otp = OTPCode(
+            email="used@test.com",
+            code="123456",
+            used=True,
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
         )
-        assert resp.status_code == 200
-        data = resp.json()
-        assert "access_token" in data
-        assert "refresh_token" in data
-        assert "id_token" in data
-        assert data["token_type"] == "Bearer"
+        db_session.add(otp)
+        await db_session.flush()
 
-
-# ---------------------------------------------------------------------------
-# Refresh token
-# ---------------------------------------------------------------------------
-class TestRefreshToken:
-    async def test_refresh_returns_new_tokens(self, unauthed_client: AsyncClient):
-        resp = await unauthed_client.post(
-            "/auth/refresh",
-            json={"refresh_token": "old-refresh-token"},
-        )
-        assert resp.status_code == 200
-        data = resp.json()
-        assert "access_token" in data
-        assert "id_token" in data
-
-
-# ---------------------------------------------------------------------------
-# Forgot / reset password
-# ---------------------------------------------------------------------------
-class TestForgotResetPassword:
-    async def test_forgot_password(self, unauthed_client: AsyncClient):
-        resp = await unauthed_client.post(
-            "/auth/forgot-password",
-            json={"email": "student@student.ubc.ca"},
-        )
-        assert resp.status_code == 200
-        assert "reset code" in resp.json()["message"].lower()
-
-    async def test_reset_password(self, unauthed_client: AsyncClient):
-        resp = await unauthed_client.post(
-            "/auth/reset-password",
-            json={
-                "email": "student@student.ubc.ca",
-                "confirmation_code": "654321",
-                "new_password": "NewPass2!",
-            },
-        )
-        assert resp.status_code == 200
-        assert "reset successfully" in resp.json()["message"].lower()
+        resp = await unauthed_client.post("/auth/otp/verify", json={"email": "used@test.com", "code": "123456"})
+        assert resp.status_code == 400
+        assert "No valid code" in resp.json()["detail"]

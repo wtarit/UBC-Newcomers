@@ -7,7 +7,8 @@ Strategy:
   (SAVEPOINT) pattern: the outer transaction is never committed, so
   every test's writes are fully rolled back -- including writes made
   by route handlers that call session.commit().
-- AWS services (Cognito, S3, Bedrock) are mocked via autouse fixture.
+- AWS services (S3, Bedrock) are mocked via autouse fixture.
+- Firebase token verification is mocked via autouse fixture.
 - FastAPI's get_current_user dependency is overridden per-test.
 """
 
@@ -29,7 +30,7 @@ from sqlalchemy.orm import SessionTransaction
 
 from app.config import settings
 from app.database import Base, get_db
-from app.dependencies import get_current_user
+from app.dependencies import FirebaseIdentity, get_firebase_identity, get_current_user
 from app.models.landmark import Landmark
 from app.models.user import User
 
@@ -62,26 +63,16 @@ async def _setup_tables():
 
 # ---------------------------------------------------------------------------
 # Function-scoped DB session using the SAVEPOINT pattern
-#
-# 1. Open a raw connection and start a real transaction (BEGIN).
-# 2. Create a SAVEPOINT (begin_nested) inside it.
-# 3. Bind an AsyncSession to that connection.
-# 4. Whenever the session commits (releasing the SAVEPOINT), immediately
-#    open a new SAVEPOINT so subsequent operations keep working.
-# 5. On teardown, rollback the outer transaction -- undoing everything.
 # ---------------------------------------------------------------------------
 @pytest_asyncio.fixture(loop_scope="session")
 async def db_session(_setup_tables) -> AsyncGenerator[AsyncSession, None]:
     engine = _get_engine()
     conn = await engine.connect()
-    txn = await conn.begin()          # outer transaction (never committed)
-    await conn.begin_nested()         # first SAVEPOINT
+    txn = await conn.begin()
+    await conn.begin_nested()
 
     session = AsyncSession(bind=conn, expire_on_commit=False)
 
-    # Whenever a SAVEPOINT is ended (committed or rolled back inside the
-    # session), start a fresh one so the session keeps working within the
-    # outer transaction.
     @event.listens_for(session.sync_session, "after_transaction_end")
     def _restart_savepoint(sess, trans: SessionTransaction):
         if conn.closed:
@@ -103,7 +94,7 @@ async def db_session(_setup_tables) -> AsyncGenerator[AsyncSession, None]:
 async def test_user(db_session: AsyncSession) -> User:
     user = User(
         id=uuid.uuid4(),
-        cognito_sub="test-sub-111",
+        firebase_uid="test-uid-111",
         email="testuser@student.ubc.ca",
         full_name="Test User",
         major="Computer Science",
@@ -128,7 +119,7 @@ async def test_user(db_session: AsyncSession) -> User:
 async def other_user(db_session: AsyncSession) -> User:
     user = User(
         id=uuid.uuid4(),
-        cognito_sub="test-sub-222",
+        firebase_uid="test-uid-222",
         email="other@student.ubc.ca",
         full_name="Other User",
         major="Biology",
@@ -164,36 +155,28 @@ async def test_landmark(db_session: AsyncSession) -> Landmark:
 
 
 # ---------------------------------------------------------------------------
-# Mock AWS services (autouse)
+# Mock external services (autouse)
 # ---------------------------------------------------------------------------
 @pytest.fixture(autouse=True)
-def _mock_aws_services():
-    """Patch all AWS service calls so no real requests are made."""
+def _mock_external_services():
+    """Patch external service calls so no real requests are made."""
     with (
-        patch("app.services.cognito._client") as mock_cognito,
+        patch("app.services.firebase_auth.verify_id_token") as mock_firebase,
+        patch("app.services.firebase_auth.get_or_create_firebase_user") as mock_get_or_create,
+        patch("app.services.firebase_auth.create_custom_token") as mock_custom_token,
         patch("app.services.s3._client") as mock_s3,
         patch("app.services.bedrock._client") as mock_bedrock,
+        patch("app.services.email.send_otp_email") as mock_email,
     ):
-        cognito_client = MagicMock()
-        mock_cognito.return_value = cognito_client
-        cognito_client.sign_up.return_value = {"UserSub": "mock-cognito-sub-123"}
-        cognito_client.confirm_sign_up.return_value = {}
-        cognito_client.initiate_auth.return_value = {
-            "AuthenticationResult": {
-                "AccessToken": "mock-access-token",
-                "RefreshToken": "mock-refresh-token",
-                "IdToken": "mock-id-token",
-            }
+        mock_firebase.return_value = {
+            "uid": "test-uid-111",
+            "email": "testuser@student.ubc.ca",
+            "name": "Test User",
         }
-        cognito_client.get_user.return_value = {
-            "UserAttributes": [
-                {"Name": "sub", "Value": "test-sub-111"},
-                {"Name": "email", "Value": "testuser@student.ubc.ca"},
-                {"Name": "name", "Value": "Test User"},
-            ]
-        }
-        cognito_client.forgot_password.return_value = {}
-        cognito_client.confirm_forgot_password.return_value = {}
+
+        mock_get_or_create.return_value = "test-uid-111"
+        mock_custom_token.return_value = "mock-custom-token"
+        mock_email.return_value = True
 
         s3_client = MagicMock()
         mock_s3.return_value = s3_client
@@ -226,6 +209,33 @@ async def client(
 
     app.dependency_overrides[get_db] = _override_get_db
     app.dependency_overrides[get_current_user] = _override_get_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://testserver") as ac:
+        yield ac
+
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture(loop_scope="session")
+async def onboarding_client(
+    db_session: AsyncSession,
+) -> AsyncGenerator[AsyncClient, None]:
+    """Client authenticated via Firebase token but with no DB user yet."""
+    from main import app
+
+    async def _override_get_db():
+        yield db_session
+
+    async def _override_get_firebase_identity():
+        return FirebaseIdentity(
+            uid="new-user-uid-999",
+            email="newuser@student.ubc.ca",
+            name="New User",
+        )
+
+    app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[get_firebase_identity] = _override_get_firebase_identity
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as ac:

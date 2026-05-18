@@ -11,6 +11,7 @@ import { useExploreStore } from '@/stores/useExploreStore';
 import { useNearbyStore } from '@/stores/useNearbyStore';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
     Image,
@@ -109,18 +110,13 @@ export default function ProfileScreen() {
 
       const localUri = result.assets[0].uri;
 
-      // Show local preview immediately
       setAvatarUri(localUri);
 
-      // Upload to backend → stored in S3, key saved to DB
       const updated = await api.uploadProfilePhoto(localUri);
-
-      // Replace local preview with the signed S3 URL returned by the server
       if (updated.profile_picture_url) {
         setAvatarUri(updated.profile_picture_url);
       }
 
-      // Refresh auth store so the rest of the app picks up the new picture
       await fetchUser();
     } catch (err) {
       console.error('Avatar upload error', err);
@@ -202,6 +198,18 @@ export default function ProfileScreen() {
           {profile.bio ? (
             <Text style={s.bio}>{profile.bio}</Text>
           ) : null}
+
+          {user?.ubc_verified ? (
+            <View style={s.verifiedBadge}>
+              <Feather name="check-circle" size={14} color={Brand.accent} />
+              <Text style={s.verifiedText}>Verified UBC Student</Text>
+            </View>
+          ) : (
+            <TouchableOpacity style={s.verifyLink} onPress={() => router.push('/ubc-verify')}>
+              <Feather name="shield" size={14} color={Brand.accent} />
+              <Text style={s.verifyLinkText}>Verify your UBC email</Text>
+            </TouchableOpacity>
+          )}
 
           <View style={s.tags}>
             {profile.interests.map(i => (
@@ -425,6 +433,33 @@ const s = StyleSheet.create({
     marginTop: Spacing.sm,
     lineHeight: 22,
     paddingHorizontal: Spacing.lg,
+  },
+
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: Spacing.sm,
+    backgroundColor: `${Brand.accent}10`,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: Radius.full,
+  },
+  verifiedText: {
+    fontFamily: Typography.fonts.h4,
+    fontSize: 13,
+    color: Brand.accent,
+  },
+  verifyLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: Spacing.sm,
+  },
+  verifyLinkText: {
+    fontFamily: Typography.fonts.body,
+    fontSize: 13,
+    color: Brand.accent,
   },
 
   tags: {

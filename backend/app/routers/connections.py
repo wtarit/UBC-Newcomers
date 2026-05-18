@@ -5,6 +5,7 @@ from sqlalchemy import or_, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.services import s3
 from app.dependencies import get_current_user
 from app.models.connection import Connection
 from app.models.connection_message import ConnectionMessage
@@ -153,7 +154,7 @@ async def list_connection_locations(
                 major=other_user.major,
                 origin=other_user.origin,
                 interests=other_user.interests,
-                profile_picture_url=None,
+                profile_picture_url=s3.public_url(other_user.profile_picture_key) if other_user.profile_picture_key else None,
                 is_available_to_meet=other_user.is_available_to_meet,
                 latitude=other_user.last_latitude,
                 longitude=other_user.last_longitude,

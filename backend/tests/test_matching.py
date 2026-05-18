@@ -76,7 +76,7 @@ class TestMatchUsers:
     ):
         similar_user = User(
             id=uuid.uuid4(),
-            cognito_sub="fallback-sub-333",
+            firebase_uid="fallback-uid-333",
             email="fallback@student.ubc.ca",
             full_name="Fallback User",
             major=test_user.major,

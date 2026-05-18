@@ -10,35 +10,18 @@ import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { Feather } from '@expo/vector-icons';
 
-export default function LoginScreen() {
+export default function EmailLoginScreen() {
   const insets = useSafeAreaInsets();
-  const { login, isLoading, error, clearError } = useAuthStore();
+  const { sendOTP, isLoading, error, clearError } = useAuthStore();
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
 
-  const canSubmit = email.includes('@') && password.length > 0;
+  const canSubmit = email.includes('@') && email.includes('.');
 
-  const handleLogin = async () => {
+  const handleSendCode = async () => {
     clearError();
-    const normalizedEmail = email.trim();
-    const success = await login(normalizedEmail, password);
+    const success = await sendOTP(email.trim().toLowerCase());
     if (success) {
-      const user = useAuthStore.getState().user;
-      if (user && !user.onboarding_completed) {
-        router.replace('/(auth)/onboarding');
-      } else {
-        router.replace('/(tabs)');
-      }
-      return;
-    }
-
-    const authError = (useAuthStore.getState().error || '').toLowerCase();
-    if (
-      normalizedEmail.includes('@') &&
-      (authError.includes('not confirmed') || authError.includes('not verify'))
-    ) {
-      router.replace({ pathname: '/(auth)/verify', params: { email: normalizedEmail } });
+      router.push({ pathname: '/(auth)/otp-verify', params: { email: email.trim().toLowerCase() } });
     }
   };
 
@@ -56,40 +39,23 @@ export default function LoginScreen() {
           <Feather name="arrow-left" size={20} color={Brand.primary} />
         </TouchableOpacity>
 
-        <Text style={s.title}>Welcome back</Text>
-        <Text style={s.subtitle}>Log in to your UBC Newcomers account</Text>
+        <Text style={s.title}>Continue with email</Text>
+        <Text style={s.subtitle}>We'll send a verification code to your email</Text>
 
         <View style={s.form}>
           <View style={s.field}>
             <Text style={s.label}>Email</Text>
             <TextInput
               style={s.input}
-              placeholder="you@student.ubc.ca"
+              placeholder="you@email.com"
               placeholderTextColor={Brand.secondary}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
+              autoFocus
             />
-          </View>
-
-          <View style={s.field}>
-            <Text style={s.label}>Password</Text>
-            <View style={s.passwordWrap}>
-              <TextInput
-                style={[s.input, { flex: 1, borderWidth: 0 }]}
-                placeholder="Your password"
-                placeholderTextColor={Brand.secondary}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoComplete="password"
-              />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={s.eyeBtn}>
-                <Feather name={showPassword ? 'eye-off' : 'eye'} size={18} color={Brand.secondary} />
-              </TouchableOpacity>
-            </View>
           </View>
 
           {error && (
@@ -99,25 +65,14 @@ export default function LoginScreen() {
           )}
 
           <Button
-            title="Log In"
+            title="Send Code"
             variant="primary"
             size="lg"
-            onPress={handleLogin}
+            onPress={handleSendCode}
             loading={isLoading}
             disabled={!canSubmit}
             style={{ width: '100%', marginTop: Spacing.md }}
           />
-
-          <TouchableOpacity style={s.forgotBtn} onPress={() => {}}>
-            <Text style={s.forgotText}>Forgot password?</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={s.footer}>
-          <Text style={s.footerText}>Don't have an account?</Text>
-          <TouchableOpacity onPress={() => router.replace('/(auth)/signup')}>
-            <Text style={s.footerLink}> Sign up</Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -143,17 +98,6 @@ const s = StyleSheet.create({
     backgroundColor: Surfaces.default, borderWidth: 1, borderColor: Surfaces.border,
     borderRadius: Radius.md, paddingHorizontal: 16, height: 48,
   },
-  passwordWrap: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: Surfaces.default, borderWidth: 1, borderColor: Surfaces.border,
-    borderRadius: Radius.md, paddingHorizontal: 16,
-  },
-  eyeBtn: { padding: 8 },
   errorBox: { backgroundColor: '#FEF2F2', borderRadius: Radius.md, padding: Spacing.md },
   errorText: { fontFamily: Typography.fonts.body, fontSize: 14, color: Brand.error },
-  forgotBtn: { alignSelf: 'center', marginTop: Spacing.sm },
-  forgotText: { fontFamily: Typography.fonts.body, fontSize: 14, color: Brand.accent },
-  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: Spacing.xl },
-  footerText: { fontFamily: Typography.fonts.body, fontSize: 14, color: Brand.secondary },
-  footerLink: { fontFamily: Typography.fonts.h4, fontSize: 14, color: Brand.accent },
 });

@@ -5,9 +5,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Brand, Surfaces, Typography, Spacing, Radius } from '@/constants/Colors';
 import { Button } from '@/components/ui/Button';
 import { Feather } from '@expo/vector-icons';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();
+  const { signInWithGoogle, isLoading, error, clearError } = useAuthStore();
+
+  const handleGoogle = async () => {
+    await signInWithGoogle();
+  };
 
   return (
     <View style={[s.container, { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 24 }]}>
@@ -28,18 +34,22 @@ export default function WelcomeScreen() {
       </View>
 
       <View style={s.actions}>
+        {error && (
+          <Text style={s.error} onPress={clearError}>{error}</Text>
+        )}
         <Button
-          title="Create Account"
+          title="Continue with Google"
           variant="primary"
           size="lg"
-          onPress={() => router.push('/(auth)/signup')}
+          onPress={handleGoogle}
+          loading={isLoading}
           style={{ width: '100%' }}
         />
         <Button
-          title="I already have an account"
+          title="Continue with Email"
           variant="ghost"
           size="lg"
-          onPress={() => router.push('/(auth)/login')}
+          onPress={() => router.push('/(auth)/email-login')}
           style={{ width: '100%' }}
         />
       </View>
@@ -78,5 +88,9 @@ const s = StyleSheet.create({
     backgroundColor: `${Brand.accent}08`, alignItems: 'center', justifyContent: 'center',
   },
   featureText: { flex: 1, fontFamily: Typography.fonts.body, fontSize: 15, color: Brand.primary, lineHeight: 22 },
+  error: {
+    fontFamily: Typography.fonts.body, fontSize: 14, color: '#E53935',
+    textAlign: 'center', paddingHorizontal: Spacing.md,
+  },
   actions: { gap: Spacing.sm, alignItems: 'center' },
 });

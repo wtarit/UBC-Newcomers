@@ -26,7 +26,7 @@ async def get_matched_users(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(User).where(User.id != current_user.id, User.onboarding_completed == True).limit(limit * 3)
+        select(User).where(User.id != current_user.id).limit(limit * 3)
     )
     candidates = list(result.scalars().all())
 

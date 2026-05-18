@@ -1,12 +1,12 @@
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.dependencies import get_current_user
+from app.dependencies import FirebaseIdentity, get_firebase_identity, get_current_user
 from app.models.user import User
 from app.schemas.user import (
     NearbyUserResponse,
@@ -30,22 +30,44 @@ router = APIRouter(prefix="/users", tags=["Users"])
 async def get_me(current_user: User = Depends(get_current_user)):
     response = UserResponse.model_validate(current_user)
     if current_user.profile_picture_key:
-        response.profile_picture_url = s3.generate_presigned_download_url(current_user.profile_picture_key)
+        response.profile_picture_url = s3.public_url(current_user.profile_picture_key)
     return response
 
 
-@router.post("/me/onboarding", response_model=UserResponse)
+def _is_ubc_email(addr: str) -> bool:
+    domain = addr.lower().split("@")[-1]
+    return domain == "ubc.ca" or domain.endswith(".ubc.ca")
+
+
+@router.post("/onboarding", response_model=UserResponse)
 async def complete_onboarding(
     body: OnboardingRequest,
-    current_user: User = Depends(get_current_user),
+    identity: FirebaseIdentity = Depends(get_firebase_identity),
     db: AsyncSession = Depends(get_db),
 ):
-    for field, value in body.model_dump(exclude_unset=True).items():
-        setattr(current_user, field, value)
-    current_user.onboarding_completed = True
+
+    result = await db.execute(select(User).where(User.firebase_uid == identity.uid))
+    if result.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="User already exists")
+
+    user = User(
+        firebase_uid=identity.uid,
+        email=identity.email,
+        full_name=body.full_name,
+        major=body.major,
+        year_standing=body.year_standing,
+        origin=body.origin,
+        interests=body.interests,
+        transfer_from=body.transfer_from,
+        faculty=body.faculty,
+        bio=body.bio,
+        ubc_verified=_is_ubc_email(identity.email),
+        onboarding_completed=True,
+    )
+    db.add(user)
     await db.commit()
-    await db.refresh(current_user)
-    return UserResponse.model_validate(current_user)
+    await db.refresh(user)
+    return UserResponse.model_validate(user)
 
 
 @router.put("/me", response_model=UserResponse)
@@ -106,26 +128,12 @@ async def get_presigned_upload(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    url, file_key = s3.generate_presigned_upload_url(current_user.id, content_type)
+    if current_user.profile_picture_key:
+        s3.delete_object(current_user.profile_picture_key)
+    url, file_key = s3.generate_presigned_upload_url(content_type)
     current_user.profile_picture_key = file_key
     await db.commit()
     return PresignedUploadResponse(upload_url=url, file_key=file_key)
-
-
-@router.post("/me/photo", response_model=UserResponse)
-async def upload_profile_photo(
-    file: UploadFile = File(...),
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Accept a multipart file upload, store it in S3, save the key on the user record."""
-    file_key = s3.upload_fileobj(current_user.id, file.file, file.content_type or "image/jpeg")
-    current_user.profile_picture_key = file_key
-    await db.commit()
-    await db.refresh(current_user)
-    response = UserResponse.model_validate(current_user)
-    response.profile_picture_url = s3.generate_presigned_download_url(file_key)
-    return response
 
 
 @router.get("/me/stats", response_model=UserStatsResponse)
