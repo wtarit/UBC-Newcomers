@@ -4,6 +4,7 @@ import {
   signInWithCustomToken as firebaseSignInWithCustomToken,
   signOut,
   GoogleAuthProvider,
+  getIdToken,
 } from '@react-native-firebase/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import type { FirebaseAuthTypes } from '@react-native-firebase/auth';
@@ -18,7 +19,7 @@ export interface AuthTokens {
 }
 
 async function getTokensFromUser(user: FirebaseAuthTypes.User): Promise<AuthTokens> {
-  const idToken = await user.getIdToken();
+  const idToken = await getIdToken(user);
   return { idToken, refreshToken: idToken };
 }
 
@@ -41,7 +42,7 @@ export async function signInWithCustomToken(customToken: string): Promise<AuthTo
 export async function refreshIdToken(): Promise<string | null> {
   const user = getAuth().currentUser;
   if (!user) return null;
-  return user.getIdToken(true);
+  return getIdToken(user, true);
 }
 
 export async function logout(): Promise<void> {

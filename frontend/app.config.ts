@@ -8,7 +8,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   icon: "./assets/images/icon.png",
   scheme: "ubc-newcomers",
   userInterfaceStyle: "dark",
-  newArchEnabled: true,
   splash: {
     image: "./assets/images/splash-icon.png",
     resizeMode: "contain",
@@ -24,7 +23,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       foregroundImage: "./assets/images/adaptive-icon.png",
       backgroundColor: "#ffffff",
     },
-    edgeToEdgeEnabled: true,
     googleServicesFile: "./google-services.json",
     permissions: [
       "android.permission.ACCESS_COARSE_LOCATION",
@@ -39,6 +37,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   plugins: [
     "expo-router",
+    "expo-font",
+    "expo-image",
+    "expo-web-browser",
     "@react-native-firebase/app",
     "@react-native-google-signin/google-signin",
     [
