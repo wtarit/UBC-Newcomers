@@ -67,10 +67,10 @@ function useProtectedRoute() {
     if (!isLoggedIn && !inAuthGroup) {
       router.replace('/(auth)/welcome');
     } else if (isLoggedIn && inAuthGroup) {
-      if (user && !user.onboarding_completed) {
-        router.replace('/(auth)/onboarding');
-      } else if (user && user.onboarding_completed) {
+      if (user) {
         router.replace('/(tabs)');
+      } else {
+        router.replace('/(auth)/onboarding');
       }
     }
   }, [accessToken, user, segments, isRestoring]);

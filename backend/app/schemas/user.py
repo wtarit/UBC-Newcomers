@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 
 class OnboardingRequest(BaseModel):
+    full_name: str
     major: str | None = None
     year_standing: int | None = None
     origin: str | None = None
@@ -57,7 +58,6 @@ class UserResponse(BaseModel):
     connections_count: int
     meetups_completed: int
     events_attended: int
-    onboarding_completed: bool
     created_at: datetime
 
     model_config = {"from_attributes": True}

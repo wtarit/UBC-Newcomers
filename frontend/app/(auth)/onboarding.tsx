@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TextInput, ScrollView,
   TouchableOpacity, KeyboardAvoidingView, Platform,
@@ -10,6 +10,16 @@ import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { api } from '@/services/api';
 import { Feather } from '@expo/vector-icons';
+
+function getNameFromIdToken(idToken: string | null): string {
+  if (!idToken) return '';
+  try {
+    const payload = JSON.parse(atob(idToken.split('.')[1]));
+    return payload.name || '';
+  } catch {
+    return '';
+  }
+}
 
 const FACULTIES = [
   'Arts', 'Science', 'Applied Science', 'Commerce', 'Forestry',
@@ -26,7 +36,8 @@ const TOTAL_STEPS = 5;
 
 export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
-  const { fetchUser } = useAuthStore();
+  const { fetchUser, idToken } = useAuthStore();
+  const fullName = useMemo(() => getNameFromIdToken(idToken), [idToken]);
   const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -64,6 +75,7 @@ export default function OnboardingScreen() {
     setIsSubmitting(true);
     try {
       await api.onboarding({
+        full_name: fullName,
         faculty,
         major: major.trim(),
         year_standing: yearStanding!,

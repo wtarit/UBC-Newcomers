@@ -9,6 +9,7 @@ import { Brand, Surfaces, Typography, Spacing, Radius } from '@/constants/Colors
 import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { Feather } from '@expo/vector-icons';
+import * as firebase from '@/services/firebase';
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -23,23 +24,10 @@ export default function LoginScreen() {
     clearError();
     const normalizedEmail = email.trim();
     const success = await login(normalizedEmail, password);
-    if (success) {
-      const user = useAuthStore.getState().user;
-      if (user && !user.onboarding_completed) {
-        router.replace('/(auth)/onboarding');
-      } else {
-        router.replace('/(tabs)');
-      }
-      return;
-    }
-
-    const authError = (useAuthStore.getState().error || '').toLowerCase();
-    if (
-      normalizedEmail.includes('@') &&
-      (authError.includes('not confirmed') || authError.includes('not verify'))
-    ) {
+    if (success && !firebase.isEmailVerified()) {
       router.replace({ pathname: '/(auth)/verify', params: { email: normalizedEmail } });
     }
+    // Navigation is handled by the root layout guard
   };
 
   return (

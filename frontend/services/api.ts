@@ -68,42 +68,11 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 }
 
 export const api = {
-  // Auth
-  signup: (email: string, password: string, full_name: string) =>
-    request<{ message: string; cognito_sub: string }>('/auth/signup', {
-      method: 'POST', body: { email, password, full_name }, auth: false,
-    }),
-
-  verify: (email: string, confirmation_code: string) =>
-    request<{ message: string }>('/auth/verify', {
-      method: 'POST', body: { email, confirmation_code }, auth: false,
-    }),
-
-  login: (email: string, password: string) =>
-    request<{ access_token: string; refresh_token: string; id_token: string; token_type: string }>('/auth/login', {
-      method: 'POST', body: { email, password }, auth: false,
-    }),
-
-  refreshToken: (refresh_token: string, email?: string | null) =>
-    request<{ access_token: string; id_token: string; token_type: string }>('/auth/refresh', {
-      method: 'POST', body: { refresh_token, email }, auth: false,
-    }),
-
-  forgotPassword: (email: string) =>
-    request<{ message: string }>('/auth/forgot-password', {
-      method: 'POST', body: { email }, auth: false,
-    }),
-
-  resetPassword: (email: string, confirmation_code: string, new_password: string) =>
-    request<{ message: string }>('/auth/reset-password', {
-      method: 'POST', body: { email, confirmation_code, new_password }, auth: false,
-    }),
-
   // Users
   getMe: () => request<UserResponse>('/users/me'),
 
   onboarding: (data: OnboardingRequest) =>
-    request<UserResponse>('/users/me/onboarding', { method: 'POST', body: data }),
+    request<UserResponse>('/users/onboarding', { method: 'POST', body: data }),
 
   updateProfile: (data: UpdateProfileRequest) =>
     request<UserResponse>('/users/me', { method: 'PUT', body: data }),
@@ -238,7 +207,6 @@ export interface UserResponse {
   connections_count: number;
   meetups_completed: number;
   events_attended: number;
-  onboarding_completed: boolean;
   created_at: string;
 }
 
@@ -269,6 +237,7 @@ export interface UserStatsResponse {
 }
 
 export interface OnboardingRequest {
+  full_name: string;
   major?: string;
   year_standing?: number;
   origin?: string;

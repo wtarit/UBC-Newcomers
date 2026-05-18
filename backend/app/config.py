@@ -7,12 +7,12 @@ class Settings(BaseSettings):
     )
 
     aws_region: str = "us-west-2"
-    cognito_user_pool_id: str = ""
-    cognito_app_client_id: str = ""
-    cognito_client_secret: str = ""
     s3_bucket_name: str = ""
     s3_endpoint_url: str = "https://s3.us-west-2.amazonaws.com"
     sns_platform_app_arn: str = ""
+
+    firebase_credentials_path: str = ""
+    firebase_project_id: str = ""
 
     bedrock_model_id: str = "anthropic.claude-sonnet-4-6"
 

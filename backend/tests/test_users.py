@@ -3,7 +3,7 @@ Tests for the /users endpoints.
 
 Covers:
 - GET /users/me - fetch own profile
-- POST /users/me/onboarding - complete onboarding
+- POST /users/onboarding - create user on onboarding
 - PUT /users/me - update profile
 - PUT /users/me/location - update live location
 - PUT /users/me/home-location - set home location
@@ -27,7 +27,6 @@ class TestGetMe:
         assert data["email"] == test_user.email
         assert data["full_name"] == test_user.full_name
         assert data["major"] == "Computer Science"
-        assert data["onboarding_completed"] is True
 
     async def test_get_me_includes_expected_fields(self, client: AsyncClient):
         resp = await client.get("/users/me")
@@ -37,16 +36,17 @@ class TestGetMe:
             "origin", "interests", "transfer_from", "faculty", "bio",
             "profile_picture_url", "home_latitude", "home_longitude",
             "is_available_to_meet", "connections_count", "meetups_completed",
-            "events_attended", "onboarding_completed", "created_at",
+            "events_attended", "created_at",
         }
         assert expected_fields.issubset(data.keys())
 
 
 class TestOnboarding:
-    async def test_complete_onboarding(self, client: AsyncClient):
-        resp = await client.post(
-            "/users/me/onboarding",
+    async def test_complete_onboarding_creates_user(self, onboarding_client: AsyncClient):
+        resp = await onboarding_client.post(
+            "/users/onboarding",
             json={
+                "full_name": "New User",
                 "major": "Physics",
                 "year_standing": 2,
                 "origin": "Korea",
@@ -57,19 +57,24 @@ class TestOnboarding:
         )
         assert resp.status_code == 200
         data = resp.json()
+        assert data["full_name"] == "New User"
         assert data["major"] == "Physics"
         assert data["year_standing"] == 2
         assert data["origin"] == "Korea"
-        assert data["onboarding_completed"] is True
+        assert data["email"] == "newuser@student.ubc.ca"
 
-    async def test_onboarding_partial_fields(self, client: AsyncClient):
-        resp = await client.post(
-            "/users/me/onboarding",
-            json={"major": "Math"},
+    async def test_onboarding_duplicate_returns_409(self, onboarding_client: AsyncClient):
+        # First call creates the user
+        await onboarding_client.post(
+            "/users/onboarding",
+            json={"full_name": "New User"},
         )
-        assert resp.status_code == 200
-        assert resp.json()["major"] == "Math"
-        assert resp.json()["onboarding_completed"] is True
+        # Second call with same identity should conflict
+        resp = await onboarding_client.post(
+            "/users/onboarding",
+            json={"full_name": "New User"},
+        )
+        assert resp.status_code == 409
 
 
 class TestUpdateProfile:

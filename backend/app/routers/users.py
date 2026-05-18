@@ -5,8 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.database import get_db
-from app.dependencies import get_current_user
+from app.dependencies import FirebaseIdentity, get_firebase_identity, get_current_user
 from app.models.user import User
 from app.schemas.user import (
     NearbyUserResponse,
@@ -34,18 +35,43 @@ async def get_me(current_user: User = Depends(get_current_user)):
     return response
 
 
-@router.post("/me/onboarding", response_model=UserResponse)
+def _validate_ubc_email(email: str):
+    if email.lower() in [e.lower() for e in settings.test_allowed_emails]:
+        return
+    domain = email.lower().split("@")[-1]
+    if domain != "ubc.ca" and not domain.endswith(".ubc.ca"):
+        raise HTTPException(status_code=400, detail="Only UBC email addresses (*.ubc.ca) are allowed.")
+
+
+@router.post("/onboarding", response_model=UserResponse)
 async def complete_onboarding(
     body: OnboardingRequest,
-    current_user: User = Depends(get_current_user),
+    identity: FirebaseIdentity = Depends(get_firebase_identity),
     db: AsyncSession = Depends(get_db),
 ):
-    for field, value in body.model_dump(exclude_unset=True).items():
-        setattr(current_user, field, value)
-    current_user.onboarding_completed = True
+    _validate_ubc_email(identity.email)
+
+    result = await db.execute(select(User).where(User.firebase_uid == identity.uid))
+    if result.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="User already exists")
+
+    user = User(
+        firebase_uid=identity.uid,
+        email=identity.email,
+        full_name=body.full_name,
+        major=body.major,
+        year_standing=body.year_standing,
+        origin=body.origin,
+        interests=body.interests,
+        transfer_from=body.transfer_from,
+        faculty=body.faculty,
+        bio=body.bio,
+        onboarding_completed=True,
+    )
+    db.add(user)
     await db.commit()
-    await db.refresh(current_user)
-    return UserResponse.model_validate(current_user)
+    await db.refresh(user)
+    return UserResponse.model_validate(user)
 
 
 @router.put("/me", response_model=UserResponse)

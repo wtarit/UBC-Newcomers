@@ -1,12 +1,12 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+import * as firebase from '@/services/firebase';
 import { api, type UserResponse } from '@/services/api';
 
 const TOKEN_KEYS = {
-  access: 'auth_access_token',
-  refresh: 'auth_refresh_token',
-  id: 'auth_id_token',
+  idToken: 'auth_id_token',
+  refreshToken: 'auth_refresh_token',
   email: 'auth_email',
 } as const;
 
@@ -50,8 +50,8 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set, get) => ({
   accessToken: null,
   refreshToken: null,
-  email: null,
   idToken: null,
+  email: null,
   user: null,
   isLoading: false,
   isRestoring: true,
@@ -60,26 +60,29 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   restoreSession: async () => {
     set({ isRestoring: true });
     try {
-      const [accessToken, refreshToken, idToken, email] = await Promise.all([
-        getToken(TOKEN_KEYS.access),
-        getToken(TOKEN_KEYS.refresh),
-        getToken(TOKEN_KEYS.id),
+      const [idToken, refreshToken, email] = await Promise.all([
+        getToken(TOKEN_KEYS.idToken),
+        getToken(TOKEN_KEYS.refreshToken),
         getToken(TOKEN_KEYS.email),
       ]);
 
-      if (!refreshToken) {
+      if (!refreshToken || !email) {
         set({ isRestoring: false });
         return;
       }
 
-      set({ accessToken, refreshToken, idToken, email });
+      set({ accessToken: idToken, idToken, refreshToken, email });
 
       try {
         await get().fetchUser();
       } catch {
         const refreshed = await get().refresh();
         if (refreshed) {
-          await get().fetchUser();
+          try {
+            await get().fetchUser();
+          } catch {
+            // User might not have onboarded yet
+          }
         } else {
           await get().logout();
         }
@@ -94,20 +97,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   login: async (email, password) => {
     set({ isLoading: true, error: null });
     try {
-      const tokens = await api.login(email, password);
-      const accessToken = tokens.access_token;
-      const refreshToken = tokens.refresh_token;
-      const idToken = tokens.id_token;
+      const tokens = await firebase.login(email, password);
 
       await Promise.all([
-        saveToken(TOKEN_KEYS.access, accessToken),
-        saveToken(TOKEN_KEYS.refresh, refreshToken),
-        saveToken(TOKEN_KEYS.id, idToken),
+        saveToken(TOKEN_KEYS.idToken, tokens.idToken),
+        saveToken(TOKEN_KEYS.refreshToken, tokens.refreshToken),
         saveToken(TOKEN_KEYS.email, email),
       ]);
 
-      set({ accessToken, refreshToken, idToken, email, isLoading: false });
-      await get().fetchUser();
+      set({
+        accessToken: tokens.idToken,
+        idToken: tokens.idToken,
+        refreshToken: tokens.refreshToken,
+        email,
+        isLoading: false,
+      });
+
+      try {
+        await get().fetchUser();
+      } catch {
+        // 404 means user hasn't onboarded — handled by navigation
+      }
       return true;
     } catch (e: any) {
       set({ isLoading: false, error: e.message });
@@ -118,19 +128,33 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signup: async (email, password, fullName) => {
     set({ isLoading: true, error: null });
     try {
-      const result = await api.signup(email, password, fullName);
-      set({ isLoading: false });
-      return { success: true, message: result.message };
+      const tokens = await firebase.signUp(email, password, fullName);
+
+      await Promise.all([
+        saveToken(TOKEN_KEYS.idToken, tokens.idToken),
+        saveToken(TOKEN_KEYS.refreshToken, tokens.refreshToken),
+        saveToken(TOKEN_KEYS.email, email),
+      ]);
+
+      set({
+        accessToken: tokens.idToken,
+        idToken: tokens.idToken,
+        refreshToken: tokens.refreshToken,
+        email,
+        isLoading: false,
+      });
+
+      return { success: true, message: 'Verification email sent' };
     } catch (e: any) {
       set({ isLoading: false, error: e.message });
       return { success: false, message: e.message };
     }
   },
 
-  verifyEmail: async (email, code) => {
+  verifyEmail: async () => {
     set({ isLoading: true, error: null });
     try {
-      await api.verify(email, code);
+      await firebase.resendVerificationEmail();
       set({ isLoading: false });
       return true;
     } catch (e: any) {
@@ -140,19 +164,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   refresh: async () => {
-    const { refreshToken, email } = get();
-    if (!refreshToken) return false;
     try {
-      const tokens = await api.refreshToken(refreshToken, email);
-      const accessToken = tokens.access_token;
-      const idToken = tokens.id_token;
+      const newToken = await firebase.refreshIdToken();
+      if (!newToken) return false;
 
-      await Promise.all([
-        saveToken(TOKEN_KEYS.access, accessToken),
-        saveToken(TOKEN_KEYS.id, idToken),
-      ]);
-
-      set({ accessToken, idToken });
+      await saveToken(TOKEN_KEYS.idToken, newToken);
+      set({ accessToken: newToken, idToken: newToken });
       return true;
     } catch {
       return false;
@@ -160,10 +177,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
+    await firebase.logout();
     await Promise.all([
-      saveToken(TOKEN_KEYS.access, null),
-      saveToken(TOKEN_KEYS.refresh, null),
-      saveToken(TOKEN_KEYS.id, null),
+      saveToken(TOKEN_KEYS.idToken, null),
+      saveToken(TOKEN_KEYS.refreshToken, null),
       saveToken(TOKEN_KEYS.email, null),
     ]);
     set({
@@ -177,12 +194,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   fetchUser: async () => {
-    try {
-      const user = await api.getMe();
-      set({ user });
-    } catch {
-      // Token might be invalid
-    }
+    const user = await api.getMe();
+    set({ user });
   },
 
   clearError: () => set({ error: null }),
